@@ -1,38 +1,33 @@
 # ai-workflow
 
-個人的「執行階段路由」方法骨架，給任何以 Claude Code + superpowers 為主的專案用。
+*[Traditional Chinese translation available: `README.zh-TW.md`]*
 
-## 這個 repo 在解決什麼問題
+A personal execution-stage routing method, for any project built mainly on Claude Code + superpowers.
 
-家目錄 `~/.claude/CLAUDE.md` 已經有一條**決策階段**規則：遇到新需求、新功能、
-行為變更時，先在 brainstorming／grill-with-docs／plan mode 三者間選一個，
-再往下走。那條規則解決的是「要不要做、怎麼做」。
+## What problem this repo solves
 
-它沒解決的是**執行階段**：決定完、真的要動手改 repo 時，一個改動到底該套
-哪個 superpowers skill（TDD？systematic-debugging？frontend-design？）、
-該叫哪個專職 agent、改完要跑哪支 check 腳本——這件事因專案而異，
-放在家目錄規則裡太空泛，每次臨場想又容易漏掉或不一致。
+The home directory's `~/.claude/CLAUDE.md` already has a **decision-stage** rule: when a new requirement, new feature, or behavior change comes up, pick one of brainstorming / grill-with-docs / plan mode before moving forward. That rule solves "should we do this, and how."
 
-`skills/change-type-routing/` 就是補這一塊的方法：不是一張抄好的表，
-而是「怎麼幫任意專案盤點出屬於它自己的那張表」。
+What it doesn't solve is the **execution stage**: once the decision is made and you're actually about to touch the repo, which superpowers skill a given change should use (TDD? systematic-debugging? frontend-design?), which specialized agent to call, which check script to run afterward — this varies by project, is too vague for a home-directory rule, and is easy to forget or apply inconsistently if you have to think it through fresh each time.
 
-## 怎麼用在新專案
+`skills/change-type-routing/` fills that gap: not a pre-filled table, but a method for helping any project inventory its own table.
 
-1. 把 `skills/change-type-routing/SKILL.md` 複製進新專案的 `.claude/skills/change-type-routing/`
-   （Claude Code 只認得專案層級或使用者層級 `~/.claude/skills/` 裡的 skill，
-   放在這個 repo 裡本身不會被任何 session 自動載入）。
-2. 在那個專案裡叫這個 skill，跟著它的盤點步驟產出這個專案自己的路由表，
-   通常直接寫進該專案的 `CLAUDE.md`，或另外開一個專案專屬的路由 skill
-   （做法可以參考 `examples/spelldungeon.md`——那是 SpellDungeon 專案套用出來的實例）。
-3. 專案有既有的專職 agent（`.claude/agents/*.md`）時，先確認它的內容是不是還對得上
-   現在的 repo 結構——不要把過期的檔案路徑或已作廢的設計原樣搬進新的路由表。
+A second skill, `skills/team-review-pipeline/`, covers a different axis of the same execution stage: not *which* mechanism handles a change, but *how deep review goes* and *who is allowed to merge* on a team where AI leads most implementation. It doesn't invent new mechanisms — it composes existing superpowers skills into one pipeline: superpowers:test-driven-development and superpowers:verification-before-completion gate what "tests pass" is allowed to mean (the tests-only review default below only holds if tests were written test-first, with real verification output, not a claim); superpowers:using-git-worktrees isolates concurrent work; superpowers:writing-plans / executing-plans break large changes into one-PR-per-task; superpowers:finishing-a-development-branch handles cleanup after merge. Its review-depth exception list, multi-model-review trigger, and 3-round review-loop cap are meant to land as a cross-cutting rule inside a project's own change-type-routing table, not as a separate document to maintain.
 
-## 這個 repo 本身怎麼保持新鮮
+**Where this stands today** — the review-depth exception list covers authN/authZ, payments, data migrations, secrets/infra config, unpinned new dependencies, and (self-referentially) changes to a project's own skill files or `CLAUDE.md`; a break-glass path exists for production incidents but can never skip the exception-list review or the human merge gate, only the isolation and optional-test-review steps. `skills/team-review-pipeline/pressure-scenarios.md` has 6 scenarios — the first 3 (deadline pressure on an exception-list change, a stuck review loop, AI approval mistaken for a merge) have each been run once against a fresh subagent and passed; the 3 added for the test-first, verification-evidence, and incident-pressure rules above are written but not yet run.
 
-`~/.claude/settings.json` 有一個全域 `SessionStart` hook，每次開 Claude Code
-session 前會 `git pull` 這個 repo（本機路徑 `~/projects/ai-workflow`）。
-失敗（離線、還沒設 remote）只會印一行警告，不會擋住 session 啟動——
-這是錦上添花的新鮮度機制，不是關鍵路徑。
+## How to use this in a new project
 
-複製到某個專案裡的 skill 檔案**不會**跟著這個 repo 自動同步——那是特定專案
-已經套用出來的具體版本，本來就會偏離通用骨架，需要更新時手動比對再複製。
+1. Copy `skills/change-type-routing/SKILL.md` (and `pressure-scenarios.md`) into the new project's `.claude/skills/change-type-routing/` (Claude Code only recognizes skills at the project level or in the user-level `~/.claude/skills/` — sitting in this repo alone won't get auto-loaded by any session).
+2. Invoke the skill in that project, follow its inventory steps to produce that project's own routing table, usually written directly into that project's `CLAUDE.md`, or as a separate project-specific routing skill (see `examples/spelldungeon.md` for a worked example from the SpellDungeon project).
+3. If the project already has specialized agents (`.claude/agents/*.md`), confirm their content still matches the current repo structure first — don't carry stale file paths or retired designs into the new routing table as-is.
+
+## This repo's own conventions
+
+This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table (skill content, pressure-scenario files, worked examples, top-level docs) plus the cross-cutting rule that changes to any `SKILL.md` or `CLAUDE.md` get the highest scrutiny here, since these files become other projects' governance rules once copied out.
+
+## How this repo itself stays fresh
+
+`~/.claude/settings.json` has a global `SessionStart` hook that `git pull`s this repo (local path `~/projects/ai-workflow`) before every Claude Code session starts. A failure (offline, no remote configured yet) just prints a warning and doesn't block session start — this is a nice-to-have freshness mechanism, not a critical path.
+
+Skill files copied into a project **do not** stay synced with this repo automatically — that's a project's own applied, concrete version, which is expected to diverge from the generic skeleton; updating it later means manually diffing and re-copying.

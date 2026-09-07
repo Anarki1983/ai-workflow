@@ -1,73 +1,45 @@
 ---
 name: change-type-routing
-description: 幫任意專案盤點出「這次改動動到 repo 的哪一塊 → 該用哪個 skill/agent/check」的執行階段路由表。在一個新專案要導入 superpowers 式的工程紀律、或既有路由表要因為 repo 結構改變而更新時使用。這是方法，不是一張現成的表——輸出因專案而異。
+description: Use when introducing superpowers-style engineering discipline to a new project that has none, or when an existing change-type routing table has gone stale because the repo's directory structure or toolchain changed.
 ---
 
-# 改動類型路由：怎麼幫一個專案盤點出它自己的表
+# Change-Type Routing: How to Inventory a Project's Own Table
 
-## 這解決的問題，以及它不解決什麼
+## The problem this solves, and what it doesn't solve
 
-多數專案的家目錄／組織層級規則負責**決策階段**：遇到新需求要不要先討論、
-要不要先寫 spec、要不要直接進 plan mode。那一層是通用的，不因專案而異。
+Most projects' home-directory or org-level rules own the **decision stage**: when a new requirement shows up, should you discuss it first, write a spec first, or go straight to plan mode? That layer is generic — it doesn't vary by project.
 
-**執行階段**不一樣：決定要做了、真的要動手時，「這次改動落在 repo 的哪一塊」
-決定了該套用哪個工程紀律。這件事因專案的目錄結構、既有工具鏈、既有專職 agent
-而完全不同，沒辦法寫成一條放諸四海皆準的規則——但盤點的**方法**是通用的，
-這份 skill 教的是方法。
+The **execution stage** is different: once the decision is made and you're actually about to touch the repo, which engineering discipline applies depends on *where* the change lands. That depends entirely on the project's directory structure, existing toolchain, and existing specialized agents — there's no single rule that works everywhere. But the *method* for inventorying it is generic, and that method is what this skill teaches.
 
-## 盤點步驟
+## Inventory steps
 
-1. **列出 repo 裡「會被獨立修改」的目錄／檔案類型**，不是照套件慣例分類，
-   是照這個 repo 實際的模組邊界分（規格文件夾？設定檔？規則核心？UI 層？
-   美術資產？測試？CI 設定？）。目錄數通常落在 5～10 個，多於這個數字
-   代表分類太細，少於這個數字通常代表漏看了一整塊。
+1. **List the directories/file types that get modified independently** in this repo — not by package convention, but by this repo's actual module boundaries (spec docs? config files? core rules? UI layer? art assets? tests? CI config?). This usually lands at 5-10 categories; more than that means you've sliced too fine, fewer usually means you missed a whole category.
 
-2. **對每一類問三個問題**：
-   - 改這一類東西時，有沒有現成的 superpowers skill 對得上
-     （TDD 對純函數、systematic-debugging 對 bug、frontend-design 對視覺決策、
-     domain-modeling 對規格／詞彙、using-git-worktrees 對需要隔離的大改動）？
-   - 有沒有既有的 check 腳本／CI 步驟守著這一類？
-   - 有沒有既有的專職 agent（`.claude/agents/*.md`）已經在管這一類？
-     **如果有，先讀它，確認它的內容還對不對得上現在的 repo 結構**——
-     專案重構、搬檔案、換架構之後，agent 檔案裡寫死的路徑與具體數字
-     很容易變成過期文件而沒人發現，因為沒人在日常流程裡會去讀它。
-     這比盤點新分類本身更容易漏，寧可先花時間對一次帳。
+2. **Ask three questions per category:**
+   - Does an existing superpowers skill match changes to this category (TDD for pure functions, systematic-debugging for bugs, frontend-design for visual decisions, domain-modeling for specs/vocabulary, using-git-worktrees for changes that need isolation)?
+   - Is there an existing check script or CI step guarding this category?
+   - Is there an existing specialized agent (`.claude/agents/*.md`) already managing this category? **If so, read it first and confirm its content still matches the current repo structure** — after a refactor, a file move, or an architecture change, the hardcoded paths and specific numbers in an agent file easily go stale without anyone noticing, because no one reads it in the normal course of work. This is easier to miss than inventorying new categories in the first place — spend the time to reconcile it now.
 
-3. **抓出橫切規則**：不屬於任何一個目錄、但任何一類出狀況都該先套用的規則
-   （典型例子是「遇到 bug 先 systematic-debugging，不分改動類型」）。
-   橫切規則放在表格外，註明「優先於其他列」。
+3. **Pull out cross-cutting rules**: rules that don't belong to any one directory but should apply regardless of category when something goes wrong (the classic example: "hit a bug → systematic-debugging first, regardless of change type"). On teams with an AI-led review pipeline, this is also where the review-depth exception list (including changes to the project's own skill files and `CLAUDE.md`, and unpinned new dependencies), the multi-model-review trigger, and the review-loop cap (e.g. "3 rounds of cloud-review↔local-fix, then escalate to a human") belong as concrete rows with actual numbers, not prose left for later — see `../team-review-pipeline/SKILL.md` for the fuller treatment. Put cross-cutting rules outside the table, noting they take priority over every row.
 
-4. **寫成一張表**：改動類型｜動到的目錄｜對應機制。放在哪裡因專案而異——
-   小專案可以直接放進專案 `CLAUDE.md`；規則細節多（例如某一類有自己的
-   方法論要交代）就把細節抽成一個專案專屬的 skill，`CLAUDE.md` 只放薄的
-   摘要表指過去，理由是 `CLAUDE.md` 每次 session 都會整份載入，適合放
-   「必看的薄內容」，細節放 skill 檔案「要用到才載入」。
+4. **Write it as a table**: change type | directories touched | corresponding mechanism. Where it lives varies by project — a small project can put it directly in the project's `CLAUDE.md`; if the rule detail is heavy (e.g., one category has its own methodology to explain), extract the detail into a project-specific skill and leave only a thin summary table in `CLAUDE.md` pointing to it. The reasoning: `CLAUDE.md` loads in full every session, so it should hold only "must-see, thin" content; details go in a skill file that loads only when needed.
 
-5. **多類重疊時怎麼辦**：一次改動常常同時落在好幾類（例如新機制同時動到
-   設定檔又動到規則核心），每一類各自的機制都要跑，不是選一個。
-   如果專案本來就有「改完全部東西都跑一次的總檢查」（例如一支
-   一次跑完所有 check 腳本的指令），在表格說明裡註明它是最後的共同安全網，
-   不代替上面任何一列——這樣不會有人誤以為跑了總檢查就不用管路由表。
+5. **When a change spans multiple categories**: a single change often lands in several categories at once (e.g., a new mechanism touches both config and core rules) — each category's mechanism runs, you don't pick just one. If the project already has a "run everything" final check (e.g., a single command that runs all check scripts), note in the table that it's the last shared safety net, not a substitute for any row above — otherwise someone will assume running the full check means they can skip the routing table.
 
-## 既有專職 agent 要不要吸收進路由表
+## Whether to absorb an existing specialized agent into the routing table
 
-如果盤點時發現一個既有的 `.claude/agents/*.md` 內容已經過期（路徑指向
-不存在的目錄、假設的架構跟現在對不上），這是一個要跟專案擁有者確認的
-決定分岔，不要自己判斷：
+If, during inventory, you find an existing `.claude/agents/*.md` whose content has gone stale (paths pointing at directories that no longer exist, assumptions about an architecture that no longer matches), this is a decision fork to confirm with the project owner, not something to decide yourself:
 
-- 只在路由表裡加一條引用，agent 檔案本體不動（改動最小，適合內容還新鮮的情況）
-- 把耐用的方法論部分抽出來寫進路由表，過期的具體數字/路徑捨棄，改指向
-  現在真正的真相來源（設定檔、規格文件），agent 檔案本體視情況保留或刪除
-- 整份原樣搬過去、標記待修——通常是圖快但會把過期內容原樣複製一份，
-  不建議，除非之後真的會回頭修
+- Add only a reference in the routing table, leave the agent file untouched (smallest change, fits when the content is still mostly fresh)
+- Extract the durable methodology into the routing table, drop the stale specific numbers/paths and point to the current source of truth (config files, spec docs) instead; keep or delete the agent file body depending on the situation
+- Copy it over as-is and flag it for later fixing — usually the fast-but-wrong option that duplicates stale content; not recommended unless someone will actually come back and fix it
 
-哪一種要問，因為「刪掉一個現有的可呼叫 agent 定義」會讓 `Agent` 工具
-少一個可以直接派工的專職 subagent type，這是有實質後果的取捨，
-不是純粹的文件整理。
+Which option to take needs to be asked, because "deleting an existing callable agent definition" means the `Agent` tool loses a specialized subagent type it could otherwise dispatch directly to — that's a consequential trade-off, not pure documentation housekeeping.
 
-## 決策階段與執行階段不要混在一起寫
+## Don't mix decision-stage and execution-stage rules in the same document
 
-輸出的路由表只管執行階段。如果專案的家目錄或專案層級規則已經有一條
-決策階段規則（新需求要先討論還是先進 plan mode），路由表裡明確提一句
-「這是那條規則之後的下一步」，避免以後有人分不清兩層規則在管什麼、
-把執行階段的路由表誤用成決策階段的擋門規則。
+The output routing table only governs the execution stage. If the project's home-directory or project-level rules already have a decision-stage rule (should a new requirement be discussed first, or go straight to plan mode), the routing table should explicitly say "this is the next step after that rule" — so nobody later confuses the two layers, or misuses the execution-stage routing table as a decision-stage gate.
+
+## Testing this skill
+
+Technique/pattern skills like this one should be validated with application and variation scenarios (per superpowers:writing-skills) before you trust the output on a real project. See `pressure-scenarios.md` in this directory for a ready-to-run set covering: correct category granularity, the stale-agent decision fork, and multi-category overlap handling.
