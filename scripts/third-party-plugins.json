@@ -1,0 +1,12 @@
+{
+  "_comment": "Pinned third-party Claude Code plugins for this team. A version bump here is a reviewed change like any other, per the root CLAUDE.md's cross-cutting rules — not a casual edit. scripts/sync.sh installs anything missing and warns (both directions) on drift; it never force-changes an installed version.",
+  "marketplaces": [
+    { "name": "claude-plugins-official", "source": { "source": "github", "repo": "anthropics/claude-plugins-official" } }
+  ],
+  "plugins": [
+    { "name": "superpowers", "marketplace": "claude-plugins-official", "version": "6.3.0" },
+    { "name": "mattpocock-skills", "marketplace": "claude-plugins-official", "version": "1.2.3" },
+    { "name": "frontend-design", "marketplace": "claude-plugins-official", "version": "85cce0381e78" },
+    { "name": "context7", "marketplace": "claude-plugins-official", "version": "85cce0381e78" }
+  ]
+}
