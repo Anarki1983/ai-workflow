@@ -24,6 +24,27 @@ def frontmatter(path):
     return m.group(1) if m else None
 
 
+def change_type_keys(path, header_cell):
+    """First column of the change-type table in `path`, in order.
+
+    The table is identified by its header row rather than by position, so
+    adding sections above or below it does not break the check.
+    """
+    rows, in_table = [], False
+    for line in path.read_text().splitlines():
+        if not in_table:
+            if line.startswith("|") and header_cell in line.split("|")[1]:
+                in_table = True
+            continue
+        if not line.startswith("|"):
+            break
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if set(cells[0]) <= {"-", ":"}:
+            continue  # separator row
+        rows.append(cells[0])
+    return rows
+
+
 def main():
     problems = []
     readme = (ROOT / "README.md").read_text()
@@ -65,6 +86,24 @@ def main():
 
         if name not in readme:
             problems.append(f"skills/{name}/ is not mentioned anywhere in README.md")
+
+    # README.zh-TW.md keeps a deliberate translation of CLAUDE.md's change-type
+    # table -- the one duplication in this repo that is on purpose, so Chinese
+    # readers can read the rules in Chinese. Deliberate is not the same as
+    # unmanaged: drift between the two is a CI failure, not something someone
+    # is expected to notice.
+    en = change_type_keys(ROOT / "CLAUDE.md", "Change type")
+    zh = change_type_keys(ROOT / "README.zh-TW.md", "\u6539\u52d5\u985e\u578b")
+    if not en:
+        problems.append("CLAUDE.md: could not find the change-type table")
+    elif not zh:
+        problems.append("README.zh-TW.md: could not find its copy of the change-type table")
+    elif en != zh:
+        problems.append(
+            f"change-type table drifted between CLAUDE.md and README.zh-TW.md:\n"
+            f"       CLAUDE.md      : {en}\n"
+            f"       README.zh-TW.md: {zh}"
+        )
 
     for line in problems:
         print(f"FAIL {line}")
