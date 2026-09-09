@@ -44,8 +44,8 @@ upstream fixes still reach us. Only the named delta differs.
 | superpowers skill | Disposition |
 |---|---|
 | `requesting-code-review` | **Override.** Its mechanics stand — SHA range, reviewer template, context crafted for the reviewer rather than the session's history. Its default reviewer does not: absent a configured default reviewing model it dispatches the authoring model in a fresh session, which is level 3. The reviewer's model is chosen deliberately and read back from the run record, per `skills/team-review-pipeline/SKILL.md` step 3. |
-| `finishing-a-development-branch` | **Override.** Drop option 1 (merge back to base locally) from the menu it presents. Integration always goes through a pull request, and a human executes the merge. Options 2 and 3 stand unchanged. |
-| `writing-skills` | **Defer to it.** Its Iron Law — no skill edit without first watching an agent fail *without* the skill — is stricter than the evidence rule this file used to state, so this file no longer states a weaker parallel version. When the two ever appear to disagree, superpowers:writing-skills wins. |
+| `finishing-a-development-branch` | **Override.** Drop the *merge back to base locally* option wherever it appears; the remaining options stand unchanged. Integration always goes through a pull request, and a human executes the merge. Once the PR is merged, the skill's own Step 6 cleanup (worktree removal, branch deletion) still applies, per `skills/team-review-pipeline/SKILL.md`. |
+| `writing-skills` | **Defer to it.** Its Iron Law — no skill edit without first watching an agent fail *without* the skill — is stricter than what this file's own rows state, so those rows defer to it rather than restating a weaker parallel version. When the two ever appear to disagree, superpowers:writing-skills wins. |
 
 Every other superpowers skill is adopted as-is and is never restated here.
 `subagent-driven-development` was checked specifically for a conflict with the

@@ -66,14 +66,24 @@ def superpowers_skill_names():
 
 
 def check_override_table(problems):
-    """Every superpowers skill named in CLAUDE.md's override table must exist."""
+    """Every superpowers skill named in CLAUDE.md's override table must exist.
+
+    The upstream-rename check below is effectively local-only: a GitHub Actions
+    runner has no `~/.claude/plugins/cache/`, so `superpowers_skill_names()`
+    returns None there and this function only verifies the table exists,
+    without comparing its contents against anything. That is acceptable
+    because the table is small and hand-edited -- whoever is changing an
+    override notices an upstream rename at edit time, in the session where
+    superpowers actually is installed. What CI alone catches is the table
+    disappearing entirely.
+    """
     named = change_type_keys(ROOT / "CLAUDE.md", "superpowers skill")
     if not named:
         problems.append("CLAUDE.md: could not find the superpowers override table")
         return
     installed = superpowers_skill_names()
     if installed is None:
-        return  # superpowers not installed here; nothing to check against
+        return  # superpowers not installed here (e.g. CI); nothing to check against
     for name in named:
         bare = name.strip("`").removeprefix("superpowers:")
         if bare not in installed:
