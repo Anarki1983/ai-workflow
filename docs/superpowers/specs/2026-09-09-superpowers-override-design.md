@@ -26,6 +26,23 @@ superpowers actually has.
 | Three-layer CLAUDE.md split | This is a Claude Code feature, not an invention of this repo | Not a gap |
 | TDD, verification, worktrees, plans | Restated verbatim | None |
 
+**Correction (added during implementation, after this design was approved):**
+verification against the installed superpowers found three of the rows above
+overstated the gap. superpowers forbids an implementer's self-review from
+standing in for the independent review, and requires every dispatched
+reviewer model to be named explicitly — reviewer independence is *partial*,
+not absent. It scales the reviewer's model to the diff's size, complexity,
+and risk (`subagent-driven-development`), though it names no risk categories,
+and its reviewer floors (mid-tier generally, most-capable for the final
+whole-branch review) are a cost rule rather than a gate tied to what the
+change touches — risk tiering is *partial*, not absent. And `subagent-driven-development` caps its in-session
+fix loop at five rounds with a breaker that adjudicates every open finding at
+the cap — a review-loop cap is *present* upstream, on a different axis (the
+in-session fix loop, judged on correctness) than this repo's (the PR/cloud-
+review loop, judged as a scope decision). This design's rows above are left
+as they stood when the decision was made; `README.md`'s gap table carries the
+corrected wording and is the accurate version as of implementation.
+
 The conclusion this design implements: **the repo should exist, at roughly a
 third of its current size, and should state its relationship to superpowers
 explicitly instead of quietly paralleling it.**

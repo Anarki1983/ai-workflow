@@ -71,7 +71,7 @@ Add this list as a cross-cutting rule in the project's `change-type-routing` tab
    - A change spanning many files becomes one PR per task — **REQUIRED SUB-SKILL:** superpowers:writing-plans, then superpowers:executing-plans or subagent-driven-development.
 5. **A human developer merges the PR.** AI review approval is never sufficient by itself — this is the one non-negotiable rule in this whole pipeline. Everything upstream of this step can be automated; this step cannot. The decision being made is scope, not correctness: whether this change belongs in the repo at all and whether it belongs now. The information it is made from is the cloud review verdict, so **a merge requires cloud review to have passed** — a merge gate that consumes no information is a rubber stamp.
    - **This step has no mechanism inside this skill, and pretending otherwise would be dishonest.** As written it is a social contract, and a social contract is not a mechanism. What makes it real is whatever the hosting platform enforces — required reviews, protected branches, whatever the project's forge and organisation provide. Configuring that is out of scope here and belongs to the project; noticing that it is unconfigured is not.
-   - After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch (worktree removal, branch deletion) rather than leaving it ad hoc.
+   - After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch — Step 6's worktree removal plus Step 5 Option 1's `git branch -d` — rather than leaving it ad hoc.
 6. CI/CD deploys to a test environment for validation.
    - **If validation fails, it routes back to step 2** (re-implement), not to an undefined state. Don't let "validation failed" become a dead end nobody owns.
 
@@ -90,7 +90,7 @@ not a release branch by another name, it is the one mechanism below.
 
 A hotfix to a shipped version branches from that version's tag, is fixed there,
 and is tagged again — the new tag is what drives CI/CD. That branch is then
-merged back into trunk. A human executes or authorises the hotfix tag push,
+merged back into trunk. A human executes the hotfix tag push,
 since that is what puts code in front of users; step 5's merge gate is a
 separate, later gate on the PR that merges the hotfix branch back into trunk.
 

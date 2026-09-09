@@ -196,7 +196,7 @@ Keep the evidence for the PR body written up as you go: the observed RED output 
 
 **Interfaces:**
 - Consumes: `CLAUDE.md`'s `## Relationship to superpowers` section from task 1. The shrunk SKILL.md points at it instead of re-explaining the override.
-- Produces: a SKILL.md with every restatement in step 5's table replaced by a reference, and its "Release branching model" section replaced by a section titled exactly `## Release and hotfix model`. Measured result: 2471 words, down from 3047, after two rounds of local-review fixes on top of the initial shrink.
+- Produces: a SKILL.md with every restatement in step 5's table replaced by a reference, and its "Release branching model" section replaced by a section titled exactly `## Release and hotfix model`. Measured result: 2542 words, down from 3047, after two rounds of local-review fixes on top of the initial shrink plus Task 3's branch-level fix wave (a cleanup-step citation correction and a merge-gate-authority word choice).
 
 - [ ] **Step 1: Write the new pressure scenario first**
 
@@ -389,7 +389,7 @@ python3 scripts/check_repo.py
 wc -w README.md
 ```
 
-Expected: passes — in particular `check_repo.py` still finds both skill names mentioned in `README.md`, which the rewrite must not drop. Target roughly 1000 words, down from about 2400.
+Expected: passes — in particular `check_repo.py` still finds both skill names mentioned in `README.md`, which the rewrite must not drop. Measured result: 1661 words, down from about 2400 — above the roughly-1000 target, after three rounds of local-review corrections to the gap table's accuracy and one branch-level fix.
 
 - [ ] **Step 8: Level-2 local review of this task**
 
