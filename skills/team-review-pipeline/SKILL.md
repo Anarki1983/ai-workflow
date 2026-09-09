@@ -47,7 +47,22 @@ Single-model review (a sub-agent, if the primary model is Claude) is the default
 
 ### Break-glass path for production incidents
 
-A live incident may skip step 0 (isolation) and step 3 (optional human test review) to move fast. It may **never** skip the exception-list code review or the step 5 human merge gate — incident pressure is exactly the condition those two rules exist to survive, not an exemption from them. Within a fixed window after the incident (e.g. 24 hours), open a postmortem PR that walks the change through the full pipeline retroactively, including the steps that were skipped live.
+A live incident may skip step 0 (isolation) and step 3 (optional human test review) to move fast. It may **never** skip the exception-list code review or the step 5 human merge gate — incident pressure is exactly the condition those two rules exist to survive, not an exemption from them. Within a fixed window after the incident (e.g. 24 hours), open a postmortem PR that walks the change through the full pipeline retroactively, including the steps that were skipped live. If the incident is a fix to an already-shipped version rather than to trunk, see **Release branching model** below for how the fix gets there — the fix still lands on trunk first, through this same break-glass path, and reaches the shipped version by cherry-pick.
+
+## Release branching model
+
+Everything above assumes trunk-based development throughout: small PRs, frequent merges into a single long-lived branch. That assumption doesn't change here — this section makes explicit what was already implicit, and covers the one place it isn't sufficient by itself: a project whose release moment doesn't coincide with every merge.
+
+**Decision criterion:** can the project itself decide when trunk's current state goes live, or is that timing controlled by someone outside the project — an app store review queue, a compliance sign-off, a customer who installs a versioned artifact on their own schedule?
+
+- **The project controls release timing.** Use feature flags: merge finished-but-not-yet-exposed work straight into trunk, gated behind a flag, and flip the flag when it should go live. This skill only names the option here — flag hygiene (when to retire a flag, how to test flag combinations) is its own discipline, out of scope for a skill about review depth and merge gates.
+- **Release timing is controlled by someone else.** Cut a short-lived `release/x.y` branch from trunk at the moment of each release. Ongoing development keeps happening on trunk, unaffected. This is deliberately not git-flow's long-lived `develop` branch: nothing on the release branch ever exists only there, so there is no separate development line that later needs reconciling back into trunk.
+
+**Hotfixing a release branch.** A fix always lands on trunk first — through the normal review and merge-gate pipeline, or through the break-glass path above if it is a live incident — then gets cherry-picked onto the affected release branch. The direction is one-way, trunk to release branch, never the reverse. **Release branches never take a direct commit.** Every change on one arrived by cherry-pick from trunk. This is the rule that keeps this model simpler than git-flow: the moment someone commits straight to a release branch to save a step, that branch starts diverging from trunk, and the project is back to needing a reconciliation (back-merge) step that this model exists to avoid. Hold this rule especially hard under incident pressure, which is exactly when the shortcut looks most tempting.
+
+Landing a cherry-pick on a release branch still goes through **step 5's human-merge rule** above — a human executes or approves it — but does not need the diff re-reviewed for correctness, since that already happened when the same commit landed on trunk. What the human is deciding here is scope: whether this fix belongs on this particular shipped version yet, not whether the code is right.
+
+Every release needs some identifiable marker of what shipped — a git tag, a version file, a CHANGELOG entry, whatever the project already uses — so a release branch's origin commit, and every patch cut onto it afterward, stays traceable. The exact form is the project's choice; only the requirement that some marker exists is not optional, since without one there is no reliable answer to "which shipped version does this hotfix belong to."
 
 ## Breaking large changes into reviewable pieces
 
@@ -56,7 +71,7 @@ A single change spanning many files or several days of work should not become on
 ## Three-layer CLAUDE.md split
 
 - **Home layer** (org/team-wide convention, shared across every project): this is what the `ai-workflow` repo's own README already describes — a `SessionStart` hook that pulls the repo and symlinks its `skills/` and `agents/` into every collaborator's global `~/.claude/skills/` and `~/.claude/agents/`, plus a one-line `@<repo>/CLAUDE.md` import added once to each collaborator's personal `~/.claude/CLAUDE.md` so the team's own conventions load every session without overwriting personal instructions. Point to that pattern rather than re-describing it here.
-- **Repo layer** (project-wide): the architecture rules a project's own `change-type-routing` table produces. This table must include the review-depth exception list (including the governance-file and unpinned-dependency rows), the multi-model trigger, and the review-loop cap number above as cross-cutting rows — they're part of the architecture rules, not a separate document.
+- **Repo layer** (project-wide): the architecture rules a project's own `change-type-routing` table produces. This table must include the review-depth exception list (including the governance-file and unpinned-dependency rows), the multi-model trigger, the review-loop cap number, and which release branching model the project uses (trunk-only, trunk with feature flags, or trunk with release branches — see Release branching model above) as cross-cutting rows — they're part of the architecture rules, not a separate document.
 - **Folder/package layer** (scoped, optional): a stricter edit boundary and smaller PR granularity for one sensitive subtree (e.g., a billing module, a crypto/auth package). Use this when a whole package needs tighter constraints than the rest of the repo, not as a substitute for the exception list above — the exception list applies by change category everywhere, the folder layer applies by location for one specific area.
 
 ## Testing this skill

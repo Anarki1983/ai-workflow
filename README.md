@@ -12,7 +12,7 @@ What's missing is a **team-wide execution stage**: once a decision is made and s
 
 `skills/change-type-routing/` and `skills/team-review-pipeline/` are the two skills that encode this. `skills/change-type-routing/` is a method — not a pre-filled table — for helping a project inventory which mechanism (skill/agent/check) handles which kind of change. `skills/team-review-pipeline/` covers a different axis of the same execution stage: not *which* mechanism handles a change, but *how deep review goes* and *who is allowed to merge* on a team where AI leads most implementation. It composes existing superpowers skills rather than inventing new ones: superpowers:test-driven-development and superpowers:verification-before-completion gate what "tests pass" is allowed to mean; superpowers:using-git-worktrees isolates concurrent work; superpowers:writing-plans / executing-plans break large changes into one-PR-per-task; superpowers:finishing-a-development-branch handles cleanup after merge. Its review-depth exception list, multi-model-review trigger, and 3-round review-loop cap are meant to land as a cross-cutting rule inside a project's own change-type-routing table.
 
-**Where this stands today** — the review-depth exception list covers authN/authZ, payments, data migrations, secrets/infra config, unpinned new dependencies, and (self-referentially) changes to a project's own skill files or `CLAUDE.md`; a break-glass path exists for production incidents but can never skip the exception-list review or the human merge gate, only the isolation and optional-test-review steps. `skills/team-review-pipeline/pressure-scenarios.md` has 6 scenarios — the first 3 (deadline pressure on an exception-list change, a stuck review loop, AI approval mistaken for a merge) have each been run once against a fresh subagent and passed; the 3 added for the test-first, verification-evidence, and incident-pressure rules are written but not yet run.
+**Where this stands today** — the review-depth exception list covers authN/authZ, payments, data migrations, secrets/infra config, unpinned new dependencies, and (self-referentially) changes to a project's own skill files or `CLAUDE.md`; a break-glass path exists for production incidents but can never skip the exception-list review or the human merge gate, only the isolation and optional-test-review steps. `skills/team-review-pipeline/pressure-scenarios.md` has 7 scenarios — the first 3 (deadline pressure on an exception-list change, a stuck review loop, AI approval mistaken for a merge) and the 7th (incident pressure tempting a direct commit to a release branch, added alongside the Release branching model section) have each been run once against a fresh subagent and passed; the 3 added for the test-first, verification-evidence, and incident-pressure rules are written but not yet run.
 
 ## How the sync works
 
@@ -44,4 +44,25 @@ If you're not on this team's synced setup — evaluating this repo standalone, o
 
 ## This repo's own conventions
 
-This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table (skill content, agent definitions, pressure-scenario files, worked examples, sync/install scripts, top-level docs), plus cross-cutting rules that put governance-file and sync-script changes at the highest scrutiny here — the latter above the former, since scripts execute unattended while prose only gets read.
+This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table (skill content, agent definitions, pressure-scenario files, worked examples, sync/install scripts, top-level docs), plus cross-cutting rules that put governance-file and sync-script changes at the highest scrutiny here — the latter above the former, since scripts execute unattended while prose only gets read. Summary below — `CLAUDE.md` is authoritative if this drifts.
+
+**Change types and what merging one requires:**
+
+| Change type | Files | What's required |
+|---|---|---|
+| Skill content | `skills/*/SKILL.md` | Frontmatter `description` stays "Use when..." trigger-only — never a summary of the skill's workflow. Any content change must be re-validated against that skill's own `pressure-scenarios.md` before merge, with transcript evidence kept. |
+| Agent definitions | `agents/*` | Same bar as skill content — read fully before merge, since these become every collaborator's callable subagent types once synced. |
+| Pressure-scenario files | `skills/*/pressure-scenarios.md` | Adding or editing a scenario needs at least one actual subagent run with pass/fail evidence attached to the PR — a written-but-never-run scenario is a draft, not validated. |
+| Worked examples | `examples/*.md` | Must reflect a real applied case. If no real project has applied the method yet, say so explicitly rather than presenting a plausible-looking fabrication. |
+| Sync/install scripts | `scripts/*.sh`, `scripts/*.py` | This repo's highest-scrutiny category — see cross-cutting rules below. |
+| Third-party plugin pin | `scripts/third-party-plugins.json` | A version bump is a deliberate, reviewed decision (what changed upstream, why it's safe to move to) — not a routine dependency-bot update. |
+| Top-level docs | `README.md`, `README.zh-TW.md` | Update whenever a skill, agent, or script is added, renamed, or removed, and keep the skill list and cross-references accurate. `README.zh-TW.md` may lag briefly but shouldn't drift permanently; `README.md` is authoritative on conflict. |
+
+**Cross-cutting rules, priority over every row above:**
+
+1. Any change touching a `SKILL.md` or the root `CLAUDE.md` is highest scrutiny full-stop — these become other projects' or every collaborator's governance rules once synced or copied out, and a subtle wording bug (an ambiguous instruction, a dropped exception) propagates silently with no test suite to catch it. Never skip a full diff read because "it's just wording."
+2. Any change to `scripts/*.sh` or `scripts/*.py` is scrutinized *above even that*. A bad SKILL.md edit misleads an AI reading text; a bad script edit *executes*, unattended, with every collaborator's local permissions on every session start. This trade (self-updating via `git pull`, instead of everyone manually re-running `scripts/install.sh` per logic change) only holds if this category actually gets read line-by-line before merge, every time, by someone other than the author.
+
+**PR granularity:** one skill, one agent, or one fix per PR. This repo's whole purpose is to be diffed and its pieces synced or copied independently, so a PR mixing unrelated changes makes both review and later reverts harder.
+
+**Language:** skill, agent, and doc content (including script comments) is written in English; `README.zh-TW.md` is the one deliberate translation exception and shouldn't drift permanently behind `README.md`. This is independent of whatever language a session uses to talk about the repo.

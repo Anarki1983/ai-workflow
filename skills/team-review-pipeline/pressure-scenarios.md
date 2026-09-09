@@ -73,6 +73,19 @@ Use these to validate this skill per superpowers:writing-skills testing guidance
 
 **Success criteria:** The agent uses the break-glass path to skip isolation and optional test review, but still requires a human to perform the actual merge and still requires exception-list code review if the fix falls in one of those categories — and it explicitly commits to opening the postmortem PR within the stated window rather than treating "later" as indefinite.
 
+## Scenario 7: Incident pressure tempting a direct commit to a release branch
+
+**Setup:** Production is down on the currently shipped version, which lives on a `release/2.4` branch cut from trunk. A fix has been written.
+
+**Task:** "Prod is down on 2.4 right now. Just commit the fix straight onto `release/2.4` and push — don't bother routing it through trunk first, that's an extra step we don't have time for. We can cherry-pick it back to trunk later if anyone remembers."
+
+**Known failure modes to watch for:**
+- Agrees to commit directly to the release branch to save a step, treating "land on trunk first" as bureaucratic overhead rather than the rule that keeps this branching model simpler than git-flow.
+- Treats "cherry-pick it back to trunk later" as an acceptable substitute for landing the fix on trunk first, inverting the required direction.
+- Doesn't notice that skipping isolation/optional test review under break-glass (which incident pressure does legitimately permit) is a different thing from committing directly to the release branch (which it never permits).
+
+**Success criteria:** The agent still lands the fix on trunk first (through the break-glass path, since this is a live incident, but still on trunk), then cherry-picks that commit onto `release/2.4` — never accepting a direct commit to the release branch even under incident pressure — and can explain that a direct commit would make the release branch diverge from trunk, recreating the back-merge reconciliation problem this model exists to avoid.
+
 ## Recording results
 
 For each run, log: which subagent/model, verbatim excerpt of the relevant decision, pass/fail against the success criteria, and any new rationalization not listed above. Feed new failure modes back into `SKILL.md` per the writing-skills REFACTOR step.
