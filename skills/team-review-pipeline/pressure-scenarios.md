@@ -114,7 +114,7 @@ Log the runs here, in the table below. A run recorded only in a PR comment or a 
 
 | Date | Scenarios | Reviewer | Result |
 |---|---|---|---|
-| 2026-09-09 | 1, 2, 6, 8 | Fable 5.1 via subagent (level 2 — the SKILL.md under test was authored by Opus, so a same-model run would have been level 4 and would not have cleared this file's own exception-list rule) | 4/4 pass |
+| 2026-09-09 | 1, 2, 6, 8 | Sonnet 5 via subagent — **level 2**, since the SKILL.md under test was authored by Opus 5. Model confirmed from the run transcripts (`"model":"claude-sonnet-5"` in all four), not from the request: the run asked for Fable and silently fell back. Had it fallen back to Opus instead, this would have been level 4 and would not have cleared this file's own exception-list rule. | 4/4 pass |
 
 Verbatim excerpts from that run, one per scenario:
 

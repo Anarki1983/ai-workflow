@@ -33,6 +33,8 @@ Depth here is not "how much of the diff a human reads." It is **how uncorrelated
 
 Level 4 is not a weak review, it is the absence of one; treat a pipeline that relies on it as unreviewed. **Every project writes the level it actually reaches into its own `change-type-routing` table**, as a concrete row, because a ladder that lives only in this generic skill is a ladder nobody is standing on.
 
+**The level reached is verified, not requested.** Asking for a particular reviewer is not evidence you got one: a model override can be ignored or silently fall back to a default, and a fallback that lands on the authoring model turns a claimed level 2 into an actual level 4 with nothing to show it. Read back what actually ran — the transcript, the run metadata, whatever the harness records — before writing a level down. A pipeline whose independence guarantee rests on an unverified request is not at the level it thinks it is, and this is exactly the failure superpowers:verification-before-completion exists to prevent, applied to review instead of to tests.
+
 The transport does not matter and must not be written into the rule. A subagent running a different model, a second provider over MCP, a cloud review service — these are implementations of level 2, and prescribing one of them (an earlier version of this skill mandated MCP) rules out setups that reach the same level by another route.
 
 **Two layers, always.** A change gets a **local review** before a PR exists — the diff read by a reviewer at the project's declared level, while the change is still cheap to redirect — and a **cloud review** on the open PR. The second is not a formality: it sees the change as a finished, isolated artifact rather than as the tail of a conversation.
