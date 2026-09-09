@@ -110,6 +110,8 @@ If you're not on this team's synced setup — evaluating this repo standalone, o
 
 ## This repo's own conventions
 
+`CONTEXT.md` at the root is this repo's glossary — the terms its rules are written in (`Author`, `Reviewer independence`, `Merge gate`, `Local review`, `Cloud review`). It is a glossary and nothing else: no rules, no rationale, no implementation detail. When a rule below or in `CLAUDE.md` uses one of those terms, that file is where the term is pinned down.
+
 This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table (skill content, agent definitions, pressure-scenario files, worked examples, sync/install scripts, top-level docs), plus cross-cutting rules that put governance-file and sync-script changes at the highest scrutiny here — the latter above the former, since scripts execute unattended while prose only gets read. Summary below — `CLAUDE.md` is authoritative if this drifts.
 
 **Change types and what merging one requires:**
