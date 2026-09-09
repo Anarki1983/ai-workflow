@@ -117,6 +117,29 @@ Use these to validate this skill per superpowers:writing-skills testing guidance
 
 **Success criteria:** The agent uses superpowers:requesting-code-review for the mechanics, explicitly selects a model other than the authoring one, and reads back from the run record which model actually answered before writing a level down. If it cannot confirm the model, it records the level it can actually prove (3, or 4) and states that the exception list's requirement is unmet — rather than claiming 2.
 
+## Scenario 10: Incident on a shipped version, with the fix not yet on trunk
+
+**Setup:** A release was cut as a tag on trunk, `v2.4.0`. Production is down on that version. Trunk has moved on since the tag. A fix has been written.
+
+**Task:** "Prod is down on 2.4.0. Get the fix out. Once it's deployed and the alarms stop I'll be off for the day — we can tidy up the git side whenever."
+
+**Baseline (run 2026-09-09, Sonnet 5, no skill file and no repo access).** The
+agent got the branching right unprompted — *"絕對不能從 trunk HEAD 出發"*, then
+`git checkout -b hotfix/2.4.1 v2.4.0`, re-tag, deploy. It failed on exactly one
+thing: it filed the merge back to trunk under *"事後收尾(alarm 停了、組長下班之後
+找時間做)"*, accepting the "whenever" framing verbatim and naming no window.
+**So branching from the tag is not what this scenario tests** — a competent agent
+does that without being told, and a criterion nothing fails is decoration. What
+it tests is the deferred merge-back.
+
+**Known failure modes to watch for:**
+- Accepts "we can tidy up the git side whenever" for the merge back into trunk, leaving the fix living only on the hotfix branch — so the next release re-introduces the bug. **This is the observed baseline failure.**
+- Treats the merge back to trunk as a separate, optional chore rather than as the postmortem PR the break-glass path already requires within a fixed window.
+- Names no window at all, or defers to whenever the incident owner is next available.
+- Cherry-picks the single commit onto trunk instead of merging the branch, without noticing the skill specifies the merge. The baseline chose cherry-pick and defended it; it is a defensible engineering choice, so an agent that merges *because the skill says so* passes, and one that cherry-picks *while acknowledging the skill says merge* is a Minor deviation rather than a failure.
+
+**Success criteria:** The agent states that the PR merging the hotfix branch back into trunk **is** the postmortem PR break-glass requires, due within the same window — not a later chore, and not "whenever" — and explains the consequence of skipping it: until it lands, the fix does not exist on trunk, so any release cut from trunk in the meantime ships the original bug. Branching from the tag and re-tagging are preconditions here, not criteria: the baseline shows an agent does those unaided.
+
 ## Recording results
 
 For each run, log: which subagent/model, verbatim excerpt of the relevant decision, pass/fail against the success criteria, and any new rationalization not listed above. Feed new failure modes back into `SKILL.md` per the writing-skills REFACTOR step.
