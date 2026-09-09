@@ -12,7 +12,7 @@
 
 `skills/change-type-routing/` 和 `skills/team-review-pipeline/` 這兩個 skill 就是把這件事寫成方法。`skills/change-type-routing/` 是一套方法——不是抄好的表——用來幫專案盤點出「哪種改動該用哪個機制（skill/agent/check）」。`skills/team-review-pipeline/` 管的是同一個執行階段的另一個軸：不是「哪個機制處理這個改動」，而是在 AI 主導大部分實作的團隊裡，「審查要多深、誰有權合併」。它組合既有的 superpowers skill，不另外發明機制：superpowers:test-driven-development 和 superpowers:verification-before-completion 決定「測試通過」算不算數；superpowers:using-git-worktrees 隔離併發中的工作；superpowers:writing-plans／executing-plans 把大改動拆成一個 task 一個 PR；superpowers:finishing-a-development-branch 負責合併後的清理。它的 review-depth 例外清單、多模型審查觸發條件、3 輪 review-loop 上限，都應該落地成專案自己 change-type-routing 表裡的橫切規則。
 
-**目前進度**——review-depth 例外清單涵蓋 authN/authZ、金流、資料遷移、密鑰／基礎設施設定、未鎖定版本的新依賴，以及（自我指涉地）改動專案自己的 skill 檔案或 `CLAUDE.md`；針對正式環境事故有一條 break-glass 路徑，但永遠不能跳過例外清單審查與人類合併這道閘，只能跳過隔離跟可選的人工測試審查。`skills/team-review-pipeline/pressure-scenarios.md` 現在有 7 個情境，全部都各自拿 fresh subagent 實際跑過一次，通過。
+**目前進度**——審查深度的衡量標準是審查者的獨立性，而不是人類讀了多少；例外清單列的是「不能用最便宜的審查者結案」的那些類別。針對正式環境事故有一條 break-glass 路徑，它只跳過隔離，其他什麼都不跳。`skills/team-review-pipeline/pressure-scenarios.md` 現在有 8 個情境，每個都拿 fresh subagent 實際跑過。
 
 ## Team review pipeline 一覽
 
@@ -24,13 +24,13 @@
 flowchart TD
     S0["0. 隔離工作<br/>（每條工作線一個 git worktree）"] --> S1["1. 文件／架構閘門<br/>（改動要符合 change-type-routing）"]
     S1 --> S2["2. Test-first 實作<br/>（先紅後綠，沒有例外）"]
-    S2 --> S3["3. 選配：人工測試審查<br/>（合理性、邊界情況）"]
+    S2 --> S3["3. Local review<br/>（由另一個模型讀完整 diff）"]
     S3 --> S4["4. 開 PR + 附上最新驗證輸出<br/>雲端審查迴圈，上限 3 輪"]
     S4 --> S5["5. 人類合併 PR<br/>（不可商量——AI 核可本身永遠不夠）"]
     S5 --> S6["6. CI/CD 部署到測試環境"]
     S6 -- 驗證失敗 --> S2
     S6 -- 驗證通過 --> Done(["完成"])
-    Incident(["正式環境事故"]) -. "break-glass：只能跳過 0 跟 3" .-> S2
+    Incident(["正式環境事故"]) -. "break-glass：只能跳過 0" .-> S2
 ```
 
 Break-glass 永遠不能跳過例外清單審查或第 5 步的人類合併閘——只能跳過隔離跟可選的測試審查，而且只限真的在發生事故時，事後還要在固定時限內補一份 postmortem PR。
@@ -42,21 +42,34 @@ Break-glass 永遠不能跳過例外清單審查或第 5 步的人類合併閘�
 | 0. 隔離 | 每條工作線各自獨立的工作區（worktree），避免併發的人或 agent 在未提交狀態上互撞 |
 | 1. 文件／架構閘門 | 動手寫程式碼之前，先確認改動符合專案的 `change-type-routing` 規則 |
 | 2. Test-first 實作 | 先寫出一個會失敗（紅）的測試並實際觀察到它失敗，才開始實作；「測試通過」只有在這個 session 裡真的跑過驗證才算數 |
-| 3. 選配：人工測試審查 | 人類檢查測試的合理性／完整性／邊界情況——這一步是否要做由專案自己決定，跟下面的例外清單審查不同，那個不能跳過 |
-| 4. 開 PR | 附上最新的驗證輸出；跑自動化雲端審查迴圈，上限 3 輪，超過就升級給人類處理 |
-| 5. 人類合併 | 整條 pipeline 唯一不可商量的規則——再多的 AI 審查核可都不能取代它 |
+| 3. Local review | 由達到專案宣告獨立性層級的審查者讀完整 diff，發生在 PR 出現之前。不是選配，也不是人類的工作 |
+| 4. 開 PR | 附上最新的驗證輸出；跑雲端審查迴圈，上限 3 輪，超過由人類決定去留——砍掉、重新切小，或帶著書面理由推翻審查 |
+| 5. 人類合併 | 整條 pipeline 唯一不可商量的規則——再多的 AI 審查核可都不能取代它。決定的是範圍不是對錯，而且必須雲端審查已經通過 |
 | 6. CI/CD 部署與驗證 | 部署到測試環境；驗證失敗會導回第 2 步，不會變成沒人管的死路 |
 
-### 審查深度：預設 vs 例外清單
+### 審查深度：獨立性，不是人類讀了多少
 
-預設：只審查測試，不審查實作——但前提是測試要先寫（test-first），否則等同沒有審查。不管測試套件看起來多有信心，以下類別一律要求完整程式碼審查，外加透過 MCP 找第二個獨立模型審查：
+**如非必要，人類不讀任何 diff。**「必要」只有兩種：要推翻審查結論，或是專案已經在自己的 routing table 裡明文宣告的類別。「這次感覺比較危險」被 skill 明確點名為**不算理由**——因為那正是一個人略讀 200 行、什麼也沒看到、然後回報說他讀過了的那種情境。
+
+深度的衡量標準是**審查判斷與撰寫判斷之間有多不相關**。階梯由強到弱：
+
+| 層級 | 審查者 |
+|---|---|
+| 1 | 另一個人類 |
+| 2 | 另一個模型 |
+| 3 | 同一個模型、全新 session、沒有上下文 |
+| 4 | 同一個模型、同一個 session——這根本不算審查 |
+
+每個改動都要兩層：PR 出現之前的 **local review**，以及 PR 上的 **cloud review**。以下例外清單要求 local review 必須是 **level 2 或更高**，而且永遠不能跳過 cloud review：
 
 - 認證／授權
 - 金流或任何碰錢的東西
 - 資料遷移
 - 密鑰、憑證、基礎設施設定
-- 改動專案自己的 skill 檔案、`CLAUDE.md` 或 `AGENTS.md`
+- 改動專案自己的 skill 檔案、`CLAUDE.md`、`CONTEXT.md` 或 `AGENTS.md`
 - 任何還沒鎖定在 lockfile 裡的新／更新依賴
+
+注意這份清單現在**不再**是什麼意思：它不會召喚一個人類來讀程式碼。那是審查深度還用人類注意力衡量時的意思，而那個版本從來沒有在任何一次 deadline 面前存活下來。
 
 ### Release 分支模型
 

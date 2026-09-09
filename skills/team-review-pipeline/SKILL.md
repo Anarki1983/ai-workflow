@@ -7,47 +7,72 @@ description: Use when setting up or auditing a multi-person, AI-led development 
 
 ## What this solves, and how it relates to change-type-routing
 
-`change-type-routing` answers "which mechanism (skill/agent/check) handles this change." This skill answers a different question on a team where AI leads most implementation: **how deep does review go, and who is allowed to merge**. The two are meant to compose — the review-depth and multi-model rules below should end up as a cross-cutting rule in a project's own change-type-routing table, not as a separate table to maintain.
+`change-type-routing` answers "which mechanism (skill/agent/check) handles this change." This skill answers a different question on a team where AI leads most implementation: **how deep does review go, and who is allowed to merge**. The two are meant to compose — the review-depth and independence rules below should end up as a cross-cutting rule in a project's own change-type-routing table, not as a separate table to maintain.
 
-## Review-depth default and exception list
+## Who reads a diff
 
-Default: review tests only, not implementation code. Tests are the source of truth for "did the AI build the right thing"; reading every line of AI-generated implementation doesn't scale on a multi-person team and duplicates what tests already check.
+**A human does not read a diff unless there is a specific reason to.** Reading is what the reviews below are for, and a human reading in the normal course of work means one of them is not being trusted to do its job. There are exactly two specific reasons, and a project that wants more must name them in its own `change-type-routing` table rather than deciding case by case in the moment:
 
-**This default only holds if the tests were written test-first.** A retrofitted test just confirms the code did whatever it did — it proves nothing about what the code *should* do, because it was written with the implementation already in view. **REQUIRED SUB-SKILL:** superpowers:test-driven-development governs step 2 of the dev flow below; "tests pass" is not evidence the tests-only default is safe to rely on unless RED was actually observed first. Treat tests-after as equivalent to no review at all, not as a weaker form of review.
+1. **Overriding a review verdict.** A person who is going to rule against a reviewer has to look at what the reviewer looked at. This is the one place in this pipeline where human judgment outranks a machine's, and it is not exercised blind.
+2. **A category the project has explicitly declared.** A project may write "a human reads every diff touching `payments/`" into its routing table. That is a legitimate choice, made once, in writing, for a named category — not a feeling that this particular change seems important.
 
-**This default also has a mandatory exception list.** A test suite passing proves nothing about properties tests don't check — security flaws, hidden coupling, performance regressions. The following always require full code review, not just test review, regardless of how confident the test suite looks:
+Anything else — a change that looks risky, a deadline that makes someone nervous, a reviewer who wants to be thorough — is not a reason. Those are exactly the conditions under which a person skims 200 lines, sees nothing, and reports that they read it.
+
+## Review depth: independence, not how much a human reads
+
+Depth here is not "how much of the diff a human reads." It is **how uncorrelated the reviewing judgment is from the authoring one**, because the failure this is defending against is a blind spot the author cannot see by definition. A model that implements and then reviews its own work shares its own blind spots completely; a second opinion is only worth what its independence is worth.
+
+**The independence ladder**, strongest first:
+
+| Level | Reviewer | Why it sits here |
+|---|---|---|
+| 1 | A different human | Different training, different priors, different stake in the design |
+| 2 | A different model | Different weights, so different blind spots — the level most teams can actually reach on every change |
+| 3 | The same model, fresh session, no context | Same priors, but at least not carrying the implementation's own reasoning forward |
+| 4 | The same model, same session | Not a review. It is the author checking their own work with extra steps |
+
+Level 4 is not a weak review, it is the absence of one; treat a pipeline that relies on it as unreviewed. **Every project writes the level it actually reaches into its own `change-type-routing` table**, as a concrete row, because a ladder that lives only in this generic skill is a ladder nobody is standing on.
+
+The transport does not matter and must not be written into the rule. A subagent running a different model, a second provider over MCP, a cloud review service — these are implementations of level 2, and prescribing one of them (an earlier version of this skill mandated MCP) rules out setups that reach the same level by another route.
+
+**Two layers, always.** A change gets a **local review** before a PR exists — the diff read by a reviewer at the project's declared level, while the change is still cheap to redirect — and a **cloud review** on the open PR. The second is not a formality: it sees the change as a finished, isolated artifact rather than as the tail of a conversation.
+
+## The exception list
+
+For most changes, the two layers at the project's declared level are the whole of it. The following always require the local review to be at **level 2 or better** — a same-model review, however fresh the session, does not clear them — and may never skip the cloud review layer:
 
 - Authentication / authorization
 - Payments or anything touching money
 - Data migrations
 - Secrets, credentials, or infrastructure config
-- Any change to the project's own skill files, `CLAUDE.md`, or `AGENTS.md` — these are governance, not product code. A bug here (a dropped exception, an ambiguous instruction) doesn't fail loudly; it silently corrupts every downstream decision that relies on it, with no test suite anywhere to catch it.
-- Any new or updated dependency that isn't already pinned in a lockfile — you can't vet a package's behavior from its name alone; someone reads what it actually does before it's trusted with an AI-led implementation's blast radius.
+- Any change to the project's own skill files, `CLAUDE.md`, `CONTEXT.md`, or `AGENTS.md` — these are governance, not product code. A bug here (a dropped exception, an ambiguous instruction) doesn't fail loudly; it silently corrupts every downstream decision that relies on it, with no test suite anywhere to catch it.
+- Any new or updated dependency that isn't already pinned in a lockfile — you can't vet a package's behaviour from its name alone; something reads what it actually does before it's trusted with an AI-led implementation's blast radius.
 
-For the exception-list categories, run the project's existing automated review tools first (e.g. a security-scanning skill, a correctness/reuse-focused code-review pass) before the human's own read — use mechanical checks for what's mechanical, and save the human's judgment for what isn't.
+Note what this list no longer says: it does not summon a human to read the code. That was its meaning when review depth was measured in human attention, and it never survived contact with a deadline. What it means now is that these categories cannot be cleared by the cheapest reviewer available.
 
-Add this list as a cross-cutting rule in the project's `change-type-routing` table (a row that overrides the tests-only default for these categories), rather than tracking it separately. A project may extend the list; it must not shrink it without the project owner explicitly signing off.
+Add this list as a cross-cutting rule in the project's `change-type-routing` table rather than tracking it separately. A project may extend the list; it must not shrink it without the project owner explicitly signing off.
 
-## Multi-model review trigger
-
-Single-model review (a sub-agent, if the primary model is Claude) is the default for everything not on the exception list above. For changes on the exception list, require a second, independent model's review via MCP before a human looks at it — two different models catching different blind spots is cheaper than one model missing something the human then has to catch cold. Don't apply this to every change: paying for two-model review on low-risk changes is waste for no safety gain.
+**Tests are still written first, and this still matters here.** A retrofitted test confirms the code did whatever it did — it proves nothing about what the code *should* do, because it was written with the implementation already in view. **REQUIRED SUB-SKILL:** superpowers:test-driven-development governs step 2 of the dev flow below. This is no longer load-bearing for *review depth* (reviewers read the whole diff now, not just the tests), but it is load-bearing for whether the tests mean anything at all as a statement of intent.
 
 ## Dev flow, with the loop-exits and evidence gates made explicit
 
 0. **Isolate the work.** Before implementation starts, set up an isolated workspace. **REQUIRED SUB-SKILL:** superpowers:using-git-worktrees. On a team where multiple people or multiple AI agents touch the same repo concurrently, skipping this step means uncommitted state, lockfiles, and half-finished test runs collide across work streams — "we agreed on separate scopes" is a social contract, not a mechanism, and it doesn't hold under real concurrency.
 1. Doc/architecture gate — the change fits the project's documented architecture rules (produced by `change-type-routing`) before anything is implemented.
 2. AI implements test-first and iterates until the tests pass. **REQUIRED SUB-SKILL:** superpowers:test-driven-development (RED before GREEN, no exceptions) and superpowers:verification-before-completion — "tests pass" may only be claimed after actually running the verification command and reading its output in this session; an agent's own unverified success report, or "should pass now," is not evidence.
-3. (Optional) Human reviews the tests — reasonableness, completeness, edge cases. Skipping this step is a per-project choice; skipping the exception-list code review above is not.
+3. **Local review.** A reviewer at the project's declared independence level reads the full diff, before a PR exists. This is the layer that matters most, because it is the only one that runs while the change is still cheap to redirect. It is not optional and it is not a human step; a project whose declared level is 4 has not configured this step, it has skipped it.
 4. Open a PR, with step 2's fresh verification output attached (not just a claim it passed). Run the project's concrete cloud-review mechanism — e.g. `/code-review ultra <PR#>` for Claude Code's own multi-agent cloud review — for consistency; findings go back to the local agent to evaluate, fix, or push back on, repeating until the review passes.
-   - **Cap this loop at 3 rounds.** If cloud review and local fixes haven't converged after 3 rounds, stop looping and escalate to a human instead of continuing indefinitely, and record the escalation in the project's audit trail (its Notion log, or whatever the project actually uses to track this) — don't let it live only in the session's memory. Write the number 3 into the project's own `change-type-routing` table as a cross-cutting rule (see below); a cap that only exists as prose in this generic skill is a cap nobody actually enforces. A project may raise or lower the number for its own risk tolerance, but it must be a concrete number on record.
-   - For a change on the exception list, this loop still runs, but the human's full code review (not just the loop's AI rounds) is what ultimately clears it — the loop cap governs the AI-review back-and-forth, not the human step.
-5. **A human developer merges the PR.** AI review approval is never sufficient by itself — this is the one non-negotiable rule in this whole pipeline. Everything upstream of this step can be automated; this step cannot. After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch (worktree removal, branch deletion) rather than leaving it ad hoc.
+   - **Cap this loop at 3 rounds.** If cloud review and local fixes haven't converged after 3 rounds, stop looping and escalate to a human, and record the escalation in the project's audit trail (its Notion log, or whatever the project actually uses to track this) — don't let it live only in the session's memory. Write the number 3 into the project's own `change-type-routing` table as a cross-cutting rule (see below); a cap that only exists as prose in this generic skill is a cap nobody actually enforces. A project may raise or lower the number for its own risk tolerance, but it must be a concrete number on record.
+   - **What escalation means.** The human decides the change's disposition, not its correctness: kill the branch, re-scope the work into smaller pieces, or override the review. Only the third of those requires reading the diff (see *Who reads a diff* above), and an override is written down with its reason — it is the one place a person's judgment outranks a machine's, and an unrecorded override is indistinguishable from giving up.
+   - For a change on the exception list, nothing about this loop changes. What changes is upstream, at step 3: its local review had to be at level 2 or better. There is no additional human reading step here to clear it.
+5. **A human developer merges the PR.** AI review approval is never sufficient by itself — this is the one non-negotiable rule in this whole pipeline. Everything upstream of this step can be automated; this step cannot. The decision being made is scope, not correctness: whether this change belongs in the repo at all and whether it belongs now. The information it is made from is the cloud review verdict, so **a merge requires cloud review to have passed** — a merge gate that consumes no information is a rubber stamp.
+   - **This step has no mechanism inside this skill, and pretending otherwise would be dishonest.** As written it is a social contract, which is exactly what step 0 rejects as insufficient. What makes it real is whatever the hosting platform enforces — required reviews, protected branches, whatever the project's forge and organisation provide. Configuring that is out of scope here and belongs to the project; noticing that it is unconfigured is not.
+   - After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch (worktree removal, branch deletion) rather than leaving it ad hoc.
 6. CI/CD deploys to a test environment for validation.
    - **If validation fails, it routes back to step 2** (re-implement), not to an undefined state. Don't let "validation failed" become a dead end nobody owns.
 
 ### Break-glass path for production incidents
 
-A live incident may skip step 0 (isolation) and step 3 (optional human test review) to move fast. It may **never** skip the exception-list code review or the step 5 human merge gate — incident pressure is exactly the condition those two rules exist to survive, not an exemption from them. Within a fixed window after the incident (e.g. 24 hours), open a postmortem PR that walks the change through the full pipeline retroactively, including the steps that were skipped live. If the incident is a fix to an already-shipped version rather than to trunk, see **Release branching model** below for how the fix gets there — the fix still lands on trunk first, through this same break-glass path, and reaches the shipped version by cherry-pick.
+A live incident may skip step 0 (isolation) to move fast. It may **never** skip step 3's local review, the exception list's level-2 requirement, or the step 5 human merge gate — incident pressure is exactly the condition those rules exist to survive, not an exemption from them. A local review costs one subagent round; the argument that there was no time for it has never been true. Within a fixed window after the incident (e.g. 24 hours), open a postmortem PR that walks the change through the full pipeline retroactively, including the steps that were skipped live. If the incident is a fix to an already-shipped version rather than to trunk, see **Release branching model** below for how the fix gets there — the fix still lands on trunk first, through this same break-glass path, and reaches the shipped version by cherry-pick.
 
 ## Release branching model
 
@@ -71,7 +96,7 @@ A single change spanning many files or several days of work should not become on
 ## Three-layer CLAUDE.md split
 
 - **Home layer** (org/team-wide convention, shared across every project): this is what the `ai-workflow` repo's own README already describes — a `SessionStart` hook that pulls the repo and symlinks its `skills/` and `agents/` into every collaborator's global `~/.claude/skills/` and `~/.claude/agents/`, plus a one-line `@<repo>/CLAUDE.md` import added once to each collaborator's personal `~/.claude/CLAUDE.md` so the team's own conventions load every session without overwriting personal instructions. Point to that pattern rather than re-describing it here.
-- **Repo layer** (project-wide): the architecture rules a project's own `change-type-routing` table produces. This table must include the review-depth exception list (including the governance-file and unpinned-dependency rows), the multi-model trigger, the review-loop cap number, and which release branching model the project uses (trunk-only, trunk with feature flags, or trunk with release branches — see Release branching model above) as cross-cutting rows — they're part of the architecture rules, not a separate document.
+- **Repo layer** (project-wide): the architecture rules a project's own `change-type-routing` table produces. This table must include the review-depth exception list (including the governance-file and unpinned-dependency rows), **the independence level this project actually reaches**, the review-loop cap number, any category where the project has declared that a human does read the diff, and which release branching model the project uses (trunk-only, trunk with feature flags, or trunk with release branches — see Release branching model above) as cross-cutting rows — they're part of the architecture rules, not a separate document.
 - **Folder/package layer** (scoped, optional): a stricter edit boundary and smaller PR granularity for one sensitive subtree (e.g., a billing module, a crypto/auth package). Use this when a whole package needs tighter constraints than the rest of the repo, not as a substitute for the exception list above — the exception list applies by change category everywhere, the folder layer applies by location for one specific area.
 
 ## Testing this skill
