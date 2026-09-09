@@ -10,11 +10,11 @@ superpowers 已經管掉大部分執行階段的事。這個 repo 存在的理�
 
 | 團隊需要什麼 | superpowers | 這個 repo |
 |---|---|---|
-| Reviewer independence——寫程式碼的模型審自己的程式碼，不算審查 | 沒有。上游講「independent」永遠只指*任務*獨立。`requesting-code-review` 派一個 subagent 出去、把結果叫做 code review，卻從沒指名審查模型是誰 | 獨立性階梯，而且達到哪個層級要從執行紀錄裡驗證，不是照著請求內容假設 |
+| Reviewer independence——寫程式碼的模型審自己的程式碼，不算審查 | 一半有。`subagent-driven-development` 禁止 implementer 審自己的工作、也不准它自己派審查者，而且規定每次派工都要明講模型是哪個——但沒有規定審查的模型一定要跟寫程式碼的不一樣，`requesting-code-review` 預設派的是 `general-purpose` subagent（那是 agent 類型，不是模型），從沒指名模型是誰 | 獨立性階梯，而且達到哪個層級要從執行紀錄裡驗證，不是照著請求內容假設 |
 | 每個人用同一套規則、同一版 plugin | 沒有。superpowers 是每人每台機器各自裝的 | `scripts/sync.sh` 跟 `scripts/install.sh`：一個 `SessionStart` hook，拉這個 repo、把它的 skill 連進每個協作者的全域配置 |
-| 有些改動需要比別的改動更嚴格的審查 | 沒有。所有改動一視同仁 | 例外清單：認證、金流、資料遷移、密鑰、治理檔案、沒鎖版的依賴 |
+| 有些改動需要比別的改動更嚴格的審查 | 一半有。`subagent-driven-development` 會依「diff 的大小、複雜度、風險」調整審查者——但沒有指名類別，也沒有訂下誰有資格結案的底線 | 例外清單：認證、金流、資料遷移、密鑰、治理檔案、沒鎖版的依賴，每一項都訂了底線 |
 | 誰有權放行一個改動 | 一半有。`finishing-a-development-branch` 說整合的決定是人類的，但同時提供一個 AI 自己執行的本地合併選項，也從沒說過 AI 核可本身不夠 | 每次合併都由人類執行，而且合併前必須雲端審查已經通過 |
-| 什麼時候該停止跟審查者爭 | 沒有 | 3 輪上限，而且把升級定義成範圍決定，不是對錯判斷 |
+| 什麼時候該停止跟審查者爭 | 上游把 session 內的修正迴圈上限訂在 5 輪，並且針對對錯做出裁決 | 這個 repo 把 PR／雲端審查迴圈上限訂在 3 輪，把升級定義成範圍決定，不是對錯判斷 |
 
 superpowers 涵蓋的其他東西——TDD、verification-before-completion、worktree 隔離、拆解計畫、審查的請求與接收機制——這個 repo 原封不動沿用，不重新實作。這個 repo 真的改動某個上游 skill 行為、而不只是補一個缺口的地方，那個 override 會明確指名、寫清楚差異在哪，放在 `CLAUDE.md` 的 **Relationship to superpowers** 這一節——這裡不重複。
 
@@ -28,7 +28,7 @@ superpowers 涵蓋的其他東西——TDD、verification-before-completion、wo
 
 `skills/change-type-routing/` 和 `skills/team-review-pipeline/` 把這件事寫成方法。`change-type-routing` 是一套方法——不是抄好的表——用來盤點「哪種改動該用哪個機制」。`team-review-pipeline` 管的是另一個軸：在 AI 主導大部分實作的團隊裡，審查要多深、誰有權合併。它的 review-depth 例外清單、多模型審查觸發條件、3 輪 review-loop 上限，都應該落地成專案自己 `change-type-routing` 表裡的橫切規則。
 
-審查深度的衡量標準是**審查者的獨立性**，而不是人類讀了多少：另一個人類、另一個模型、同一個模型全新 session 沒有上下文、或同一個 session——由強到弱。Break-glass 只跳過一次事故當下的隔離，其他什麼都不跳——絕不跳過 local review、例外清單，或人類合併閘。完整的模型（包含已發布版本的 hotfix 怎麼回到 trunk）見 `skills/team-review-pipeline/SKILL.md`。它的 `pressure-scenarios.md` 有 9 個情境，每個都拿 fresh subagent 實際跑過。
+審查深度的衡量標準是**審查者的獨立性**，而不是人類讀了多少：另一個人類、另一個模型、同一個模型全新 session 沒有上下文、或同一個 session——由強到弱。Break-glass 只跳過一次事故當下的隔離，其他什麼都不跳——絕不跳過 local review、例外清單，或人類合併閘。完整的模型（包含已發布版本的 hotfix 怎麼回到 trunk）見 `skills/team-review-pipeline/SKILL.md`。它的 `pressure-scenarios.md` 有 10 個情境，目前已經實際跑過的都留有紀錄。
 
 ## 開發流程
 
@@ -85,11 +85,11 @@ bash scripts/install.sh
 
 這個 repo 自己吃自己的狗食：根目錄的 `CLAUDE.md` 就是這個 repo **自己的** change-type-routing 表——每種改動類型一列（skill 內容、agent 定義、pressure-scenario 檔案、worked example、design specs and plans、同步／安裝腳本、plugin 釘選、詞彙表、頂層文件），每一列寫明那一類的 PR 必須附上什麼，外加橫切規則說明這裡的審查怎麼跑、誰負責合併。
 
-**這張表在這裡保留一份中文翻譯。** `README.md` 不留副本，只指向 `CLAUDE.md`；中文這份是刻意的例外，因為這個 repo 除了本檔案以外全部是英文，而規則本身是中文讀者最需要能直接看懂的部分。代價是它會漂移，所以 `scripts/check_repo.py` 會比對兩邊的改動類型清單，對不上就讓 CI 失敗。有出入時仍然以 `CLAUDE.md` 為準。
+**這張表在這裡保留一份中文翻譯。** `README.md` 不留副本，只指向 `CLAUDE.md`；中文這份是刻意保留的重複。`scripts/check_repo.py` 會比對兩邊的改動類型清單，對不上就讓 CI 失敗，所以這份刻意的重複不會沒人管。
 
 | 改動類型 | 檔案 | 要求什麼 |
 |---|---|---|
-| Skill content | `skills/*/SKILL.md` | Frontmatter 的 `description` 要維持「Use when...」這種只講觸發時機的寫法（superpowers:writing-skills 的 SDO 規則——絕不能拿來總結 skill 的工作流程）。任何內容變更合併前都要拿那個 skill 自己的 `pressure-scenarios.md` 重新驗證過——跑相關情境（或新增一個涵蓋這次改動的情境），並留下 transcript 證據，依 superpowers:verification-before-completion（沒有證據就不算完成）。 |
+| Skill content | `skills/*/SKILL.md` | Frontmatter 的 `description` 要維持「Use when...」這種只講觸發時機的寫法（superpowers:writing-skills 的 SDO 規則——絕不能拿來總結 skill 的工作流程）。任何內容變更合併前都要拿那個 skill 自己的 `pressure-scenarios.md` 重新驗證過——跑相關情境（或新增一個涵蓋這次改動的情境），並留下 transcript 證據，依 superpowers:verification-before-completion（沒有證據就不算完成）。只跑過「有這個 skill」時通過的那一次，只算一半的證據；superpowers:writing-skills 還要求沒有這個 skill 時的基準失敗（baseline failure）。這裡不重複它的規則——以它為準。 |
 | Agent definitions | `agents/*` | 標準跟 skill 內容一樣：合併前要完整讀過，因為一旦同步出去，這些會變成每個協作者能叫用的 subagent 類型。 |
 | Pressure-scenario files | `skills/*/pressure-scenarios.md` | 新增或修改情境，至少要附一次真的拿 subagent 跑過的 pass/fail 證據到 PR 上——寫好但沒跑過的情境不算驗證過，只是草稿。 |
 | Worked examples | `examples/*.md` | 必須對應一個真實套用過的案例。如果目前還沒有專案真的用過這個方法，就要在檔案裡明講，不能生一個看起來合理但是編出來的案例。 |
