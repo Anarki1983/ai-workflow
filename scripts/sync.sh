@@ -63,7 +63,10 @@ prune_dir() {
     [ -d "$target" ] && continue # still a live skill/agent
     name="$(basename "$dst")"
     if rm -f "$dst"; then
-      WARNINGS+=("removed stale $kind/$name link: no longer exists in ai-workflow")
+      # Name the target: removing a symlink discards nothing but its name and
+      # where it pointed, so saying both makes an unattended deletion a
+      # one-command undo (ln -s <target> <dst>) instead of a black box.
+      WARNINGS+=("removed stale $kind/$name link (pointed at $target, which no longer exists) — restore with: ln -s $target $dst")
     else
       WARNINGS+=("failed to remove stale $kind/$name link at $dst")
     fi
