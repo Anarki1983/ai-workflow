@@ -114,8 +114,9 @@ bash scripts/install.sh
 
 **那張表刻意不在這裡重抄一遍。** 以前兩份 README 都各抄了一份，維護三份同一張表的成本遠超過它的價值——它第一次被改寫時就立刻在兩個語言之間製造了一個合併衝突。請直接讀 `CLAUDE.md`，它很短，而且是唯一的一份。
 
-其中一件事值得寫在 README，因為那是評估這個 repo 的人真正想知道的：
+其中兩件事值得寫在 README，因為那是評估這個 repo 的人真正想知道的：
 
+- **機械檢查跑在 CI 上**，每個 PR 與每次推上 `main` 都會跑：`shellcheck` 掃 shell 腳本、Python 語法與 JSON 合法性檢查，以及 `scripts/check_repo.py`——它抓的是純文件 repo 裡會無聲腐爛的那些東西：新增了 skill 卻沒寫進 README、frontmatter 的 `description` 又滑回去總結工作流程、某個 skill 沒有 `pressure-scenarios.md` 可以驗證。它隨時可以手動跑。這個 repo 沒有 branch protection，所以 CI 是回報，不是閘門。
 - **有兩類改動必須在 PR 附上證據。** 改 skill 檔案要附那個 skill 的 `pressure-scenarios.md` 執行結果；改動會在協作者機器上執行的腳本，要附在用完即丟的環境裡跑過的指令與輸出。兩者不分高下——它們的失效不同單位，所以各自寫自己的要求，而不是排在同一條嚴重性階梯上。
 
 **PR 粒度**：一個 skill、一個 agent 或一個修正一個 PR。這個 repo 存在的意義就是被 diff、被獨立同步或複製，所以混了不相關改動的 PR 會讓審查和日後的還原都更難。
