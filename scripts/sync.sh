@@ -8,8 +8,13 @@ CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 WARNINGS=()
 
 # --- 0. Keep this repo (and this script) fresh before using it ---
-if ! git -C "$REPO_DIR" pull --quiet >/dev/null 2>&1; then
-  WARNINGS+=("ai-workflow git pull failed, using local checkout as-is")
+# --ff-only is required, not a preference: this runs unattended on every
+# collaborator's machine. A plain `git pull` on a checkout that has any local
+# commit silently creates a merge commit in a repo whose scripts execute with
+# that collaborator's permissions. Refusing to fast-forward and warning is the
+# only safe failure here.
+if ! git -C "$REPO_DIR" pull --ff-only --quiet >/dev/null 2>&1; then
+  WARNINGS+=("ai-workflow git pull could not fast-forward, using local checkout as-is (diverged, dirty, or offline)")
 fi
 
 # --- 1. Symlink this repo's own skills/ and agents/ into the global dirs ---
