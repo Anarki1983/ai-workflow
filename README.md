@@ -12,7 +12,7 @@ What's missing is a **team-wide execution stage**: once a decision is made and s
 
 `skills/change-type-routing/` and `skills/team-review-pipeline/` are the two skills that encode this. `skills/change-type-routing/` is a method — not a pre-filled table — for helping a project inventory which mechanism (skill/agent/check) handles which kind of change. `skills/team-review-pipeline/` covers a different axis of the same execution stage: not *which* mechanism handles a change, but *how deep review goes* and *who is allowed to merge* on a team where AI leads most implementation. It composes existing superpowers skills rather than inventing new ones: superpowers:test-driven-development and superpowers:verification-before-completion gate what "tests pass" is allowed to mean; superpowers:using-git-worktrees isolates concurrent work; superpowers:writing-plans / executing-plans break large changes into one-PR-per-task; superpowers:finishing-a-development-branch handles cleanup after merge. Its review-depth exception list, multi-model-review trigger, and 3-round review-loop cap are meant to land as a cross-cutting rule inside a project's own change-type-routing table.
 
-**Where this stands today** — the review-depth exception list covers authN/authZ, payments, data migrations, secrets/infra config, unpinned new dependencies, and (self-referentially) changes to a project's own skill files or `CLAUDE.md`; a break-glass path exists for production incidents but can never skip the exception-list review or the human merge gate, only the isolation and optional-test-review steps. `skills/team-review-pipeline/pressure-scenarios.md` has 7 scenarios, all run once against a fresh subagent and passed.
+**Where this stands today** — review depth is measured as reviewer independence rather than as how much a human reads, and the exception list names the categories that cannot be cleared by the cheapest reviewer available. A break-glass path exists for production incidents; it skips isolation and nothing else. `skills/team-review-pipeline/pressure-scenarios.md` has 8 scenarios, each run against a fresh subagent.
 
 ## Team review pipeline at a glance
 
@@ -24,16 +24,16 @@ What's missing is a **team-wide execution stage**: once a decision is made and s
 flowchart TD
     S0["0. Isolate the work<br/>(git worktree per work stream)"] --> S1["1. Doc/architecture gate<br/>(change fits change-type-routing)"]
     S1 --> S2["2. Implement test-first<br/>(RED before GREEN, no exceptions)"]
-    S2 --> S3["3. Optional human test review<br/>(reasonableness, edge cases)"]
+    S2 --> S3["3. Local review<br/>(different model reads the full diff)"]
     S3 --> S4["4. Open PR + fresh verification output<br/>cloud review loop, capped at 3 rounds"]
     S4 --> S5["5. Human merges the PR<br/>(non-negotiable — AI approval alone is never enough)"]
     S5 --> S6["6. CI/CD deploys to a test environment"]
     S6 -- validation fails --> S2
     S6 -- validation passes --> Done(["Done"])
-    Incident(["Live production incident"]) -. "break-glass: skip 0 & 3 only" .-> S2
+    Incident(["Live production incident"]) -. "break-glass: skips 0 only" .-> S2
 ```
 
-Break-glass never skips the exception-list code review or the step 5 human merge gate — only isolation and the optional test review, and only for a live incident, with a postmortem PR required within a fixed window afterward.
+Break-glass skips isolation and nothing else. It never skips the local review, the exception list's level-2 requirement, or the step 5 human merge gate — and it applies only to a live incident, with a postmortem PR required within a fixed window afterward.
 
 ### Step-by-step core content
 
@@ -42,21 +42,34 @@ Break-glass never skips the exception-list code review or the step 5 human merge
 | 0. Isolate | A separate workspace (worktree) per work stream, so concurrent people/agents don't collide on uncommitted state |
 | 1. Doc/architecture gate | The change must fit the project's `change-type-routing` rules before any code is written |
 | 2. Test-first implementation | A failing test is written and observed RED before implementation; "tests pass" only counts after an actual in-session verification run |
-| 3. Optional human test review | Human checks test reasonableness/completeness/edge cases — a per-project choice to skip, unlike the exception-list review below |
-| 4. Open PR | Fresh verification output attached; automated cloud review loop runs, capped at 3 rounds before escalating to a human |
-| 5. Human merges | The pipeline's one non-negotiable rule — no amount of AI review approval substitutes for it |
+| 3. Local review | A reviewer at the project's declared independence level reads the full diff, before a PR exists. Not optional, and not a human step |
+| 4. Open PR | Fresh verification output attached; cloud review loop runs, capped at 3 rounds, then the human decides disposition — kill, re-scope, or override with a recorded reason |
+| 5. Human merges | The pipeline's one non-negotiable rule — no amount of AI review approval substitutes for it. The decision is scope, not correctness, and it requires cloud review to have passed |
 | 6. CI/CD deploy & validate | Deploys to a test environment; a failed validation routes back to step 2, never a dead end |
 
-### Review depth: default vs. exception list
+### Review depth: independence, not how much a human reads
 
-Default: review tests only, not implementation — and only holds if the tests were written test-first (a retrofitted test is treated as no review at all). Full code review, plus a second independent model via MCP, is mandatory regardless of test confidence for:
+**A human does not read a diff unless there is a specific reason to** — overriding a review verdict, or a category the project has explicitly declared in its routing table. "This one feels risky" is named in the skill as exactly the kind of non-reason the rule exists to exclude, because it is the condition under which someone skims 200 lines, sees nothing, and reports that they read it.
+
+Depth is measured as **how uncorrelated the reviewing judgment is from the authoring one**. The ladder, strongest first:
+
+| Level | Reviewer |
+|---|---|
+| 1 | A different human |
+| 2 | A different model |
+| 3 | The same model, fresh session, no context |
+| 4 | The same model, same session — not a review at all |
+
+Every change gets two layers: a **local review** before the PR exists, and **cloud review** on it. The exception list below requires the local review to be at **level 2 or better** and may never skip cloud review:
 
 - Authentication / authorization
 - Payments or anything touching money
 - Data migrations
 - Secrets, credentials, or infrastructure config
-- Changes to the project's own skill files, `CLAUDE.md`, or `AGENTS.md`
+- Changes to the project's own skill files, `CLAUDE.md`, `CONTEXT.md`, or `AGENTS.md`
 - Any new or updated dependency not already pinned in a lockfile
+
+Note what that list no longer means: it does not summon a human to read the code. That was its meaning when depth was measured in human attention, and it never survived contact with a deadline.
 
 ### Release branching model
 
