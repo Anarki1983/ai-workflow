@@ -82,7 +82,11 @@ A live incident may skip step 0 (isolation) to move fast. It may **never** skip 
 ## Release and hotfix model
 
 Trunk-based throughout: small PRs, frequent merges, one long-lived branch. A
-release is a **tag on trunk**. There are no release branches.
+release is a **tag on trunk**. There are no release branches — no branch is
+ever cut from trunk in advance and kept alive alongside it. A branch cut
+*from a tag* to carry fixes for that shipped version, living only until it
+merges back, is what this model does everywhere, incident or not — that is
+not a release branch by another name, it is the one mechanism below.
 
 A hotfix to a shipped version branches from that version's tag, is fixed there,
 and is tagged again — the new tag is what drives CI/CD. That branch is then
@@ -102,8 +106,8 @@ a hotfix's ancestry is readable from which tag it branched from.
 
 When an external gatekeeper controls release timing — an app-store review
 queue, a compliance sign-off — fixes for the pending submission accumulate on
-a branch cut from the submitted tag and it is re-tagged for resubmission: the
-same mechanism, not a new one.
+a branch cut from the submitted tag, and that branch is re-tagged when it's
+ready for resubmission: the same mechanism, not a new one.
 
 ## What the project's own routing table must carry
 
