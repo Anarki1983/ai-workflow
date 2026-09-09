@@ -10,9 +10,9 @@
 
 真正缺的是**團隊層級的執行階段**：決定做了、真的要動手（不管是人還是 AI）改 repo 時，一個改動該套哪個 superpowers skill（TDD？systematic-debugging？frontend-design？）、該叫哪個專職 agent、審查要多深、誰有權合併——這件事需要對每個協作者、每個專案都**一致**，不然「團隊共用標準」這件事本身就沒意義。
 
-`skills/change-type-routing/` 和 `skills/team-review-pipeline/` 這兩個 skill 就是把這件事寫成方法。`skills/change-type-routing/` 是一套方法——不是抄好的表——用來幫專案盤點出「哪種改動該用哪個機制（skill/agent/check）」。`skills/team-review-pipeline/` 管的是同一個執行階段的另一個軸：不是「哪個機制處理這個改動」，而是在 AI 主導大部分實作的團隊裡，「審查要多深、誰有權合併」。它組合既有的 superpowers skill，不另外發明機制：superpowers:test-driven-development 和 superpowers:verification-before-completion 決定「測試通過」算不算數；superpowers:using-git-worktrees 隔離併發中的工作；superpowers:writing-plans／executing-plans 把大改動拆成一個 task 一個 PR；superpowers:finishing-a-development-branch 負責合併後的清理。它的 review-depth 例外清單、多模型審查觸發條件、3 輪 review-loop 上限，都應該落地成專案自己 change-type-routing 表裡的橫切規則。
+`skills/change-type-routing/` 和 `skills/team-review-pipeline/` 這兩個 skill 就是把這件事寫成方法。`skills/change-type-routing/` 是一套方法——不是抄好的表——用來幫專案盤點出「哪種改動該用哪個機制（skill/agent/check）」。`skills/team-review-pipeline/` 管的是同一個執行階段的另一個軸：不是「哪個機制處理這個改動」，而是在 AI 主導大部分實作的團隊裡，「審查要多深、誰有權合併」。它組合既有的 superpowers skill，不另外發明機制：superpowers:test-driven-development 和 superpowers:verification-before-completion 決定「測試通過」算不算數；superpowers:using-git-worktrees 隔離併發中的工作；superpowers:requesting-code-review 提供 local review 的機制、superpowers:receiving-code-review 管它的 findings 怎麼處理（reviewer independence 則是這個 skill 自己加在它們之上的要求）；superpowers:writing-plans／executing-plans 把大改動拆成一個 task 一個 PR；superpowers:finishing-a-development-branch 負責合併後的清理。它的 review-depth 例外清單、多模型審查觸發條件、3 輪 review-loop 上限，都應該落地成專案自己 change-type-routing 表裡的橫切規則。
 
-**目前進度**——審查深度的衡量標準是審查者的獨立性，而不是人類讀了多少；例外清單列的是「不能用最便宜的審查者結案」的那些類別。針對正式環境事故有一條 break-glass 路徑，它只跳過隔離，其他什麼都不跳。`skills/team-review-pipeline/pressure-scenarios.md` 現在有 8 個情境，每個都拿 fresh subagent 實際跑過。
+**目前進度**——審查深度的衡量標準是審查者的獨立性，而不是人類讀了多少；例外清單列的是「不能用最便宜的審查者結案」的那些類別。針對正式環境事故有一條 break-glass 路徑，它只跳過隔離，其他什麼都不跳。`skills/team-review-pipeline/pressure-scenarios.md` 現在有 9 個情境，每個都拿 fresh subagent 實際跑過。
 
 ## Team review pipeline 一覽
 
