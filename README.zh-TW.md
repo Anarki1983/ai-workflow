@@ -127,7 +127,18 @@ bash scripts/install.sh
 
 這個 repo 自己吃自己的狗食：根目錄的 `CLAUDE.md` 就是這個 repo **自己的** change-type-routing 表——每種改動類型一列（skill 內容、agent 定義、pressure-scenario 檔案、worked example、同步／安裝腳本、plugin 釘選、詞彙表、頂層文件），每一列寫明那一類的 PR 必須附上什麼，外加橫切規則說明這裡的審查怎麼跑、誰負責合併。
 
-**那張表刻意不在這裡重抄一遍。** 以前兩份 README 都各抄了一份，維護三份同一張表的成本遠超過它的價值——它第一次被改寫時就立刻在兩個語言之間製造了一個合併衝突。請直接讀 `CLAUDE.md`，它很短，而且是唯一的一份。
+**這張表在這裡保留一份中文翻譯。** `README.md` 不留副本，只指向 `CLAUDE.md`；中文這份是刻意的例外，因為這個 repo 除了本檔案以外全部是英文，而規則本身是中文讀者最需要能直接看懂的部分。代價是它會漂移，所以 `scripts/check_repo.py` 會比對兩邊的改動類型清單，對不上就讓 CI 失敗。有出入時仍然以 `CLAUDE.md` 為準。
+
+| 改動類型 | 檔案 | 要求什麼 |
+|---|---|---|
+| Skill content | `skills/*/SKILL.md` | Frontmatter 的 `description` 要維持「Use when...」這種只講觸發時機的寫法（superpowers:writing-skills 的 SDO 規則——絕不能拿來總結 skill 的工作流程）。任何內容變更合併前都要拿那個 skill 自己的 `pressure-scenarios.md` 重新驗證過——跑相關情境（或新增一個涵蓋這次改動的情境），並留下 transcript 證據，依 superpowers:verification-before-completion（沒有證據就不算完成）。 |
+| Agent definitions | `agents/*` | 標準跟 skill 內容一樣：合併前要完整讀過，因為一旦同步出去，這些會變成每個協作者能叫用的 subagent 類型。 |
+| Pressure-scenario files | `skills/*/pressure-scenarios.md` | 新增或修改情境，至少要附一次真的拿 subagent 跑過的 pass/fail 證據到 PR 上——寫好但沒跑過的情境不算驗證過，只是草稿。 |
+| Worked examples | `examples/*.md` | 必須對應一個真實套用過的案例。如果目前還沒有專案真的用過這個方法，就要在檔案裡明講，不能生一個看起來合理但是編出來的案例。 |
+| Scripts that run on a collaborator's machine | `scripts/sync.sh`、`scripts/install.sh`、`scripts/sync_plugins.py` | 改過的腳本必須在用完即丟的環境裡實際跑過（假的 `CLAUDE_CONFIG_DIR`、假的 `HOME`、暫時的 repo——能隔離就行），指令與輸出要附在 PR 上。絕對不要為了「確認它能動」而在真實機器上跑。讀程式碼得到的是它看起來會做什麼；跑一次才知道它實際碰了哪些檔案。 |
+| Third-party plugin pin | `scripts/third-party-plugins.json` | 改版本號是一次刻意、需要審查的決定（上游改了什麼、為什麼現在升級是安全的），不是例行的依賴更新——這一類為什麼存在，見 `skills/team-review-pipeline/SKILL.md` 的未鎖定依賴那一列。 |
+| Glossary | `CONTEXT.md` | 改動或移除一個詞，代表所有用到它的文件都要在同一個 PR 裡一起改——一個同時有兩種活著的意思的詞，比沒有詞彙表更糟。只放定義：不放規則、不放理由、不放實作細節。 |
+| Top-level docs | `README.md`、`README.zh-TW.md` | 只要新增、改名或移除 skill、agent 或腳本，就要更新，並確認 skill 清單跟交叉引用都還對得上。`README.zh-TW.md` 可以短暫落後 `README.md`，但不該永久漂移；兩份不同步時以 `README.md` 為準。 |
 
 其中兩件事值得寫在 README，因為那是評估這個 repo 的人真正想知道的：
 

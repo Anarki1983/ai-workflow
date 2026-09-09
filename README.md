@@ -127,7 +127,7 @@ If you're not on this team's synced setup — evaluating this repo standalone, o
 
 This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table — one row per change type (skill content, agent definitions, pressure-scenario files, worked examples, sync/install scripts, plugin pin, glossary, top-level docs), each stating what a PR in that category must attach, plus cross-cutting rules covering how review works here and who merges.
 
-**That table is deliberately not reproduced here.** It used to be, in both READMEs, and keeping three copies of one table in sync cost more than it was ever worth — a single rewrite of it produced a merge conflict across two languages the first time it was touched. Read `CLAUDE.md`; it is short, and it is the only copy.
+**That table is deliberately not reproduced here.** It used to be, and keeping a copy in this file bought nothing: an English reader can read `CLAUDE.md`, which is short. `README.zh-TW.md` does keep a translation of it — the one duplication in this repo that is on purpose, since every other file here is English and the rules are the part a Chinese reader most needs in Chinese. `scripts/check_repo.py` compares the two tables' change-type lists and fails CI on drift, because a duplication kept on purpose still has to be kept honest.
 
 Two things from it are worth stating in the README, because they are what a reader evaluating this repo actually wants to know:
 
