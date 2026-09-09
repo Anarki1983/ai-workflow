@@ -62,7 +62,7 @@ Add this list as a cross-cutting rule in the project's `change-type-routing` tab
 1. Doc/architecture gate — the change fits the project's documented architecture rules (produced by `change-type-routing`) before anything is implemented.
 2. AI implements test-first. **REQUIRED SUB-SKILL:** superpowers:test-driven-development and superpowers:verification-before-completion.
 3. **Local review.** A reviewer at the project's declared independence level reads the full diff, before a PR exists. This is the layer that matters most, because it is the only one that runs while the change is still cheap to redirect. It is not optional and it is not a human step; a project whose declared level is 4 has not configured this step, it has skipped it.
-   - **REQUIRED SUB-SKILL:** superpowers:requesting-code-review supplies the mechanics — the SHA range, the reviewer prompt template, context crafted for the reviewer instead of the session's history, and a reviewer that does not spawn reviewers of its own. What it does not supply is independence: its default reviewer, absent a configured model, lands at level 3 on the ladder above or worse. The authoritative statement of this override — what this pipeline requires on top of that skill — lives in `CLAUDE.md`'s **## Relationship to superpowers**.
+   - **REQUIRED SUB-SKILL:** superpowers:requesting-code-review supplies the mechanics — the SHA range, the reviewer prompt template, context crafted for the reviewer instead of the session's history, and a reviewer that does not spawn reviewers of its own. What it does not supply is independence: its default reviewer, absent a configured model, lands at level 3 on the ladder above, or level 4 if the harness answers from the authoring session. The authoritative statement of this override — what this pipeline requires on top of that skill — lives in the `ai-workflow` repo's own `CLAUDE.md`, under **## Relationship to superpowers**.
    - **REQUIRED SUB-SKILL:** superpowers:receiving-code-review governs what happens to findings, from this layer and from step 4's: verify each one against the codebase before implementing it, push back with technical reasoning where the reviewer is wrong, and never perform agreement. A reviewer at level 2 is worth having precisely because it disagrees with you; an author who implements every finding on sight has converted an independent review back into a rubber stamp from the other end.
 4. Open a PR, with step 2's fresh verification output attached (not just a claim it passed). Run the project's concrete cloud-review mechanism — e.g. `/code-review ultra <PR#>` for Claude Code's own multi-agent cloud review — for consistency; findings go back to the local agent, handled per step 3's superpowers:receiving-code-review requirement, repeating until the review passes.
    - **Cap this loop at 3 rounds.** If cloud review and local fixes haven't converged after 3 rounds, stop looping and escalate to a human, and record the escalation in the project's audit trail (its Notion log, or whatever the project actually uses to track this) — don't let it live only in the session's memory. Write the number 3 into the project's own `change-type-routing` table as a cross-cutting rule (see below); a cap that only exists as prose in this generic skill is a cap nobody actually enforces. A project may raise or lower the number for its own risk tolerance, but it must be a concrete number on record.
@@ -70,7 +70,7 @@ Add this list as a cross-cutting rule in the project's `change-type-routing` tab
    - For a change on the exception list, nothing about this loop changes. What changes is upstream, at step 3: its local review had to be at level 2 or better. There is no additional human reading step here to clear it.
    - A change spanning many files becomes one PR per task — **REQUIRED SUB-SKILL:** superpowers:writing-plans, then superpowers:executing-plans or subagent-driven-development.
 5. **A human developer merges the PR.** AI review approval is never sufficient by itself — this is the one non-negotiable rule in this whole pipeline. Everything upstream of this step can be automated; this step cannot. The decision being made is scope, not correctness: whether this change belongs in the repo at all and whether it belongs now. The information it is made from is the cloud review verdict, so **a merge requires cloud review to have passed** — a merge gate that consumes no information is a rubber stamp.
-   - **This step has no mechanism inside this skill, and pretending otherwise would be dishonest.** As written it is a social contract, which is exactly what step 0 rejects as insufficient. What makes it real is whatever the hosting platform enforces — required reviews, protected branches, whatever the project's forge and organisation provide. Configuring that is out of scope here and belongs to the project; noticing that it is unconfigured is not.
+   - **This step has no mechanism inside this skill, and pretending otherwise would be dishonest.** As written it is a social contract, and a social contract is not a mechanism. What makes it real is whatever the hosting platform enforces — required reviews, protected branches, whatever the project's forge and organisation provide. Configuring that is out of scope here and belongs to the project; noticing that it is unconfigured is not.
    - After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch (worktree removal, branch deletion) rather than leaving it ad hoc.
 6. CI/CD deploys to a test environment for validation.
    - **If validation fails, it routes back to step 2** (re-implement), not to an undefined state. Don't let "validation failed" become a dead end nobody owns.
@@ -86,9 +86,9 @@ release is a **tag on trunk**. There are no release branches.
 
 A hotfix to a shipped version branches from that version's tag, is fixed there,
 and is tagged again — the new tag is what drives CI/CD. That branch is then
-merged back into trunk. During the incident, the new tag drives the deploy
-directly with no human merge gate in front of it — step 5's merge gate applies
-to the PR that merges the hotfix branch back into trunk, not to the tag.
+merged back into trunk. A human executes or authorises the hotfix tag push,
+since that is what puts code in front of users; step 5's merge gate is a
+separate, later gate on the PR that merges the hotfix branch back into trunk.
 
 The merge back is the step that gets skipped, at exactly the moment it is most
 likely to be: the incident is over and production is healthy. So it is not a
@@ -100,13 +100,18 @@ from trunk in the meantime ships the original bug.
 Every release therefore has a traceable marker by construction — the tag — and
 a hotfix's ancestry is readable from which tag it branched from.
 
+When an external gatekeeper controls release timing — an app-store review
+queue, a compliance sign-off — fixes for the pending submission accumulate on
+a branch cut from the submitted tag and it is re-tagged for resubmission: the
+same mechanism, not a new one.
+
 ## What the project's own routing table must carry
 
 The repo layer — a project's `change-type-routing` table — must state as
 concrete rows, with actual values rather than prose: **the independence level
-this project actually reaches**, the review-loop cap number, its release
-model, and any category where the project has declared that a human does read
-the diff. A rule with no number in it is not a rule anyone can be held to.
+this project actually reaches**, the review-loop cap number, and any category
+where the project has declared that a human does read the diff. A rule with
+no number in it is not a rule anyone can be held to.
 
 The home layer is this repo, synced as its README describes. A folder layer —
 a stricter boundary for one sensitive subtree — is optional, supplements the

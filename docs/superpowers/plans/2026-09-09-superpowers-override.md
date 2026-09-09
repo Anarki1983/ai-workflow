@@ -196,7 +196,7 @@ Keep the evidence for the PR body written up as you go: the observed RED output 
 
 **Interfaces:**
 - Consumes: `CLAUDE.md`'s `## Relationship to superpowers` section from task 1. The shrunk SKILL.md points at it instead of re-explaining the override.
-- Produces: a SKILL.md with every restatement in step 5's table replaced by a reference, and its "Release branching model" section replaced by a section titled exactly `## Release and hotfix model`. Measured result: 2379 words, down from 3047.
+- Produces: a SKILL.md with every restatement in step 5's table replaced by a reference, and its "Release branching model" section replaced by a section titled exactly `## Release and hotfix model`. Measured result: 2471 words, down from 3047, after two rounds of local-review fixes on top of the initial shrink.
 
 - [ ] **Step 1: Write the new pressure scenario first**
 
