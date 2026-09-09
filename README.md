@@ -114,8 +114,9 @@ This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* 
 
 **That table is deliberately not reproduced here.** It used to be, in both READMEs, and keeping three copies of one table in sync cost more than it was ever worth — a single rewrite of it produced a merge conflict across two languages the first time it was touched. Read `CLAUDE.md`; it is short, and it is the only copy.
 
-One thing from it is worth stating in the README, because it is what a reader evaluating this repo actually wants to know:
+Two things from it are worth stating in the README, because they are what a reader evaluating this repo actually wants to know:
 
+- **The mechanical checks run in CI**, on every PR and every push to `main`: `shellcheck` over the shell scripts, a Python syntax check and a JSON validity check over the rest, and `scripts/check_repo.py`, which catches what goes stale silently in a prose repo — a skill added without a README mention, a frontmatter `description` that drifts back into summarising the workflow, a skill with no `pressure-scenarios.md` to validate it against. It is safe to run by hand at any time. There is no branch protection here, so CI reports rather than blocks.
 - **Two categories must attach evidence to the PR.** A change to a skill file attaches the run of that skill's `pressure-scenarios.md`; a change to a script that runs on collaborators' machines attaches the command and output of running it in a throwaway environment. Neither ranks above the other — they fail in different units, so each states its own requirement rather than sitting on a severity ladder.
 
 **PR granularity:** one skill, one agent, or one fix per PR. This repo's whole purpose is to be diffed and its pieces synced or copied independently, so a PR mixing unrelated changes makes both review and later reverts harder.

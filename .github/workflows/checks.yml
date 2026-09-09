@@ -1,0 +1,25 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # shellcheck is preinstalled on the ubuntu runner.
+      - name: shellcheck
+        run: shellcheck scripts/*.sh
+
+      - name: python syntax
+        run: python3 -m py_compile scripts/*.py
+
+      - name: manifest is valid JSON
+        run: python3 -c "import json; json.load(open('scripts/third-party-plugins.json'))"
+
+      - name: repo self-consistency
+        run: python3 scripts/check_repo.py
