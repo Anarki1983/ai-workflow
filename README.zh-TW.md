@@ -10,11 +10,11 @@ superpowers 已經管掉大部分執行階段的事。這個 repo 存在的理�
 
 | 團隊需要什麼 | superpowers | 這個 repo |
 |---|---|---|
-| Reviewer independence——寫程式碼的模型審自己的程式碼，不算審查 | 一半有。`subagent-driven-development` 禁止 implementer 審自己的工作、也不准它自己派審查者，而且規定每次派工都要明講模型是哪個——但沒有規定審查的模型一定要跟寫程式碼的不一樣，`requesting-code-review` 預設派的是 `general-purpose` subagent（那是 agent 類型，不是模型），從沒指名模型是誰 | 獨立性階梯，而且達到哪個層級要從執行紀錄裡驗證，不是照著請求內容假設 |
+| Reviewer independence——寫程式碼的模型審自己的程式碼，不算審查 | 一半有。`subagent-driven-development` 禁止用 implementer 的自我審查取代審查，也不准它自己派審查者，而且規定每次派工都要明講模型是哪個——但沒有規定審查的模型一定要跟寫程式碼的不一樣，`requesting-code-review` 預設派的是 `general-purpose` subagent（那是 agent 類型，不是模型），從沒指名模型是誰 | 獨立性階梯，而且達到哪個層級要從執行紀錄裡驗證，不是照著請求內容假設 |
 | 每個人用同一套規則、同一版 plugin | 沒有。superpowers 是每人每台機器各自裝的 | `scripts/sync.sh` 跟 `scripts/install.sh`：一個 `SessionStart` hook，拉這個 repo、把它的 skill 連進每個協作者的全域配置 |
-| 有些改動需要比別的改動更嚴格的審查 | 一半有。`subagent-driven-development` 會依「diff 的大小、複雜度、風險」調整審查者——但沒有指名類別，也沒有訂下誰有資格結案的底線 | 例外清單：認證、金流、資料遷移、密鑰、治理檔案、沒鎖版的依賴，每一項都訂了底線 |
+| 有些改動需要比別的改動更嚴格的審查 | 一半有。`subagent-driven-development` 會依「diff 的大小、複雜度、風險」調整審查者——但沒有指名類別，唯一的審查者底線（mid-tier）是為了成本，不是跟改動碰到什麼綁在一起的關卡 | 例外清單：認證、金流、資料遷移、密鑰、治理檔案、沒鎖版的依賴，六項共用同一條底線（level 2 或更高） |
 | 誰有權放行一個改動 | 一半有。`finishing-a-development-branch` 說整合的決定是人類的，但同時提供一個 AI 自己執行的本地合併選項，也從沒說過 AI 核可本身不夠 | 每次合併都由人類執行，而且合併前必須雲端審查已經通過 |
-| 什麼時候該停止跟審查者爭 | 上游把 session 內的修正迴圈上限訂在 5 輪，並且針對對錯做出裁決 | 這個 repo 把 PR／雲端審查迴圈上限訂在 3 輪，把升級定義成範圍決定，不是對錯判斷 |
+| 什麼時候該停止跟審查者爭 | 一半有。上游把 session 內的修正迴圈上限訂在 5 輪，並且針對對錯做出裁決 | 這個 repo 把 PR／雲端審查迴圈上限訂在 3 輪，把升級定義成範圍決定，不是對錯判斷 |
 
 superpowers 涵蓋的其他東西——TDD、verification-before-completion、worktree 隔離、拆解計畫、審查的請求與接收機制——這個 repo 原封不動沿用，不重新實作。這個 repo 真的改動某個上游 skill 行為、而不只是補一個缺口的地方，那個 override 會明確指名、寫清楚差異在哪，放在 `CLAUDE.md` 的 **Relationship to superpowers** 這一節——這裡不重複。
 
