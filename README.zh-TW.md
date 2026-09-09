@@ -14,6 +14,68 @@
 
 **目前進度**——review-depth 例外清單涵蓋 authN/authZ、金流、資料遷移、密鑰／基礎設施設定、未鎖定版本的新依賴，以及（自我指涉地）改動專案自己的 skill 檔案或 `CLAUDE.md`；針對正式環境事故有一條 break-glass 路徑，但永遠不能跳過例外清單審查與人類合併這道閘，只能跳過隔離跟可選的人工測試審查。`skills/team-review-pipeline/pressure-scenarios.md` 現在有 7 個情境，全部都各自拿 fresh subagent 實際跑過一次，通過。
 
+## Team review pipeline 一覽
+
+`skills/team-review-pipeline/SKILL.md` 才是原始依據，這份摘要跟它有出入時以它為準——這一節純粹是為了方便快速掌握流程跟規則、適合直接拿去做簡報。
+
+### 開發流程
+
+```mermaid
+flowchart TD
+    S0["0. 隔離工作<br/>（每條工作線一個 git worktree）"] --> S1["1. 文件／架構閘門<br/>（改動要符合 change-type-routing）"]
+    S1 --> S2["2. Test-first 實作<br/>（先紅後綠，沒有例外）"]
+    S2 --> S3["3. 選配：人工測試審查<br/>（合理性、邊界情況）"]
+    S3 --> S4["4. 開 PR + 附上最新驗證輸出<br/>雲端審查迴圈，上限 3 輪"]
+    S4 --> S5["5. 人類合併 PR<br/>（不可商量——AI 核可本身永遠不夠）"]
+    S5 --> S6["6. CI/CD 部署到測試環境"]
+    S6 -- 驗證失敗 --> S2
+    S6 -- 驗證通過 --> Done(["完成"])
+    Incident(["正式環境事故"]) -. "break-glass：只能跳過 0 跟 3" .-> S2
+```
+
+Break-glass 永遠不能跳過例外清單審查或第 5 步的人類合併閘——只能跳過隔離跟可選的測試審查，而且只限真的在發生事故時，事後還要在固定時限內補一份 postmortem PR。
+
+### 各步驟核心內容
+
+| 步驟 | 要求什麼 |
+|---|---|
+| 0. 隔離 | 每條工作線各自獨立的工作區（worktree），避免併發的人或 agent 在未提交狀態上互撞 |
+| 1. 文件／架構閘門 | 動手寫程式碼之前，先確認改動符合專案的 `change-type-routing` 規則 |
+| 2. Test-first 實作 | 先寫出一個會失敗（紅）的測試並實際觀察到它失敗，才開始實作；「測試通過」只有在這個 session 裡真的跑過驗證才算數 |
+| 3. 選配：人工測試審查 | 人類檢查測試的合理性／完整性／邊界情況——這一步是否要做由專案自己決定，跟下面的例外清單審查不同，那個不能跳過 |
+| 4. 開 PR | 附上最新的驗證輸出；跑自動化雲端審查迴圈，上限 3 輪，超過就升級給人類處理 |
+| 5. 人類合併 | 整條 pipeline 唯一不可商量的規則——再多的 AI 審查核可都不能取代它 |
+| 6. CI/CD 部署與驗證 | 部署到測試環境；驗證失敗會導回第 2 步，不會變成沒人管的死路 |
+
+### 審查深度：預設 vs 例外清單
+
+預設：只審查測試，不審查實作——但前提是測試要先寫（test-first），否則等同沒有審查。不管測試套件看起來多有信心，以下類別一律要求完整程式碼審查，外加透過 MCP 找第二個獨立模型審查：
+
+- 認證／授權
+- 金流或任何碰錢的東西
+- 資料遷移
+- 密鑰、憑證、基礎設施設定
+- 改動專案自己的 skill 檔案、`CLAUDE.md` 或 `AGENTS.md`
+- 任何還沒鎖定在 lockfile 裡的新／更新依賴
+
+### Release 分支模型
+
+```mermaid
+flowchart TD
+    Trunk["永遠是 trunk-based<br/>（小 PR、頻繁合併）"] --> Crit{"專案自己能不能<br/>控制 release 時機？"}
+    Crit -- 能 --> Flags["Feature flag：<br/>未完成工作直接合進 trunk，<br/>準備好再翻牌"]
+    Crit -- "不能——被外部守門人卡住" --> RelBranch["每次 release 從 trunk<br/>剪一條短命的 release/x.y 分支"]
+    RelBranch --> Hotfix["Hotfix：修正先落 trunk，<br/>再 cherry-pick 到 release/x.y<br/>——絕不直接 commit 到 release/x.y"]
+```
+
+每次 release 都要留下可追溯的標記（git tag、版本檔案、CHANGELOG 條目——形式由專案自訂），讓 release 分支的起始 commit、以及後續每次補丁都能追溯回去。
+
+### CLAUDE.md 三層分法
+
+- **Home 層**（組織／團隊層級）：透過這個 repo 自己的 `SessionStart` hook 機制自動同步（見下方說明）。
+- **Repo 層**（專案層級）：專案自己的 `change-type-routing` 表——必須把 review-depth 例外清單、多模型審查觸發條件、review-loop 上限，以及專案選定的 release 分支模型，都寫成橫切規則的列。
+- **Folder／package 層**（範圍限定、選用）：針對某個敏感子目錄（例如金流、認證模組）額外收緊的編輯邊界——是對上面例外清單的補充，不是替代。
+
 ## 同步機制怎麼運作
 
 每位協作者跑這一次：

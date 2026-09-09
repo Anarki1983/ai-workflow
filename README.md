@@ -14,6 +14,68 @@ What's missing is a **team-wide execution stage**: once a decision is made and s
 
 **Where this stands today** — the review-depth exception list covers authN/authZ, payments, data migrations, secrets/infra config, unpinned new dependencies, and (self-referentially) changes to a project's own skill files or `CLAUDE.md`; a break-glass path exists for production incidents but can never skip the exception-list review or the human merge gate, only the isolation and optional-test-review steps. `skills/team-review-pipeline/pressure-scenarios.md` has 7 scenarios, all run once against a fresh subagent and passed.
 
+## Team review pipeline at a glance
+
+`skills/team-review-pipeline/SKILL.md` is the source of truth if this summary drifts — this section exists for a quick, presentation-friendly overview of its flow and rules.
+
+### Dev flow
+
+```mermaid
+flowchart TD
+    S0["0. Isolate the work<br/>(git worktree per work stream)"] --> S1["1. Doc/architecture gate<br/>(change fits change-type-routing)"]
+    S1 --> S2["2. Implement test-first<br/>(RED before GREEN, no exceptions)"]
+    S2 --> S3["3. Optional human test review<br/>(reasonableness, edge cases)"]
+    S3 --> S4["4. Open PR + fresh verification output<br/>cloud review loop, capped at 3 rounds"]
+    S4 --> S5["5. Human merges the PR<br/>(non-negotiable — AI approval alone is never enough)"]
+    S5 --> S6["6. CI/CD deploys to a test environment"]
+    S6 -- validation fails --> S2
+    S6 -- validation passes --> Done(["Done"])
+    Incident(["Live production incident"]) -. "break-glass: skip 0 & 3 only" .-> S2
+```
+
+Break-glass never skips the exception-list code review or the step 5 human merge gate — only isolation and the optional test review, and only for a live incident, with a postmortem PR required within a fixed window afterward.
+
+### Step-by-step core content
+
+| Step | What it requires |
+|---|---|
+| 0. Isolate | A separate workspace (worktree) per work stream, so concurrent people/agents don't collide on uncommitted state |
+| 1. Doc/architecture gate | The change must fit the project's `change-type-routing` rules before any code is written |
+| 2. Test-first implementation | A failing test is written and observed RED before implementation; "tests pass" only counts after an actual in-session verification run |
+| 3. Optional human test review | Human checks test reasonableness/completeness/edge cases — a per-project choice to skip, unlike the exception-list review below |
+| 4. Open PR | Fresh verification output attached; automated cloud review loop runs, capped at 3 rounds before escalating to a human |
+| 5. Human merges | The pipeline's one non-negotiable rule — no amount of AI review approval substitutes for it |
+| 6. CI/CD deploy & validate | Deploys to a test environment; a failed validation routes back to step 2, never a dead end |
+
+### Review depth: default vs. exception list
+
+Default: review tests only, not implementation — and only holds if the tests were written test-first (a retrofitted test is treated as no review at all). Full code review, plus a second independent model via MCP, is mandatory regardless of test confidence for:
+
+- Authentication / authorization
+- Payments or anything touching money
+- Data migrations
+- Secrets, credentials, or infrastructure config
+- Changes to the project's own skill files, `CLAUDE.md`, or `AGENTS.md`
+- Any new or updated dependency not already pinned in a lockfile
+
+### Release branching model
+
+```mermaid
+flowchart TD
+    Trunk["Trunk-based always<br/>(small PRs, frequent merges)"] --> Crit{"Does the project control<br/>its own release timing?"}
+    Crit -- Yes --> Flags["Feature flags:<br/>merge hidden work into trunk,<br/>flip the flag when ready"]
+    Crit -- "No — external gatekeeper" --> RelBranch["Cut a short-lived release/x.y<br/>branch at each release"]
+    RelBranch --> Hotfix["Hotfix: land the fix on trunk first,<br/>then cherry-pick it onto release/x.y<br/>— never commit to release/x.y directly"]
+```
+
+Every release needs a traceable marker (a git tag, a version file, a CHANGELOG entry — the project's choice), so a release branch's origin commit and every patch cut onto it afterward stays traceable.
+
+### Three-layer CLAUDE.md split
+
+- **Home layer** (org-wide): synced automatically via this repo's own `SessionStart` hook mechanism (see below).
+- **Repo layer** (project-wide): a project's `change-type-routing` table — must include the review-depth exception list, the multi-model-review trigger, the review-loop cap, and the project's chosen release branching model as cross-cutting rows.
+- **Folder/package layer** (scoped, optional): a stricter edit boundary for one sensitive subtree (e.g. billing, auth) — supplements, never replaces, the exception list above.
+
 ## How the sync works
 
 Every collaborator runs this once:
