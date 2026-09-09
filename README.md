@@ -110,24 +110,13 @@ If you're not on this team's synced setup — evaluating this repo standalone, o
 
 ## This repo's own conventions
 
-This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table (skill content, agent definitions, pressure-scenario files, worked examples, sync/install scripts, top-level docs), plus cross-cutting rules that put governance-file and sync-script changes at the highest scrutiny here — the latter above the former, since scripts execute unattended while prose only gets read. Summary below — `CLAUDE.md` is authoritative if this drifts.
+This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table — one row per change type (skill content, agent definitions, pressure-scenario files, worked examples, sync/install scripts, plugin pin, glossary, top-level docs), each stating what a PR in that category must attach, plus cross-cutting rules covering how review works here and who merges.
 
-**Change types and what merging one requires:**
+**That table is deliberately not reproduced here.** It used to be, in both READMEs, and keeping three copies of one table in sync cost more than it was ever worth — a single rewrite of it produced a merge conflict across two languages the first time it was touched. Read `CLAUDE.md`; it is short, and it is the only copy.
 
-| Change type | Files | What's required |
-|---|---|---|
-| Skill content | `skills/*/SKILL.md` | Frontmatter `description` stays "Use when..." trigger-only — never a summary of the skill's workflow. Any content change must be re-validated against that skill's own `pressure-scenarios.md` before merge, with transcript evidence kept. |
-| Agent definitions | `agents/*` | Same bar as skill content — read fully before merge, since these become every collaborator's callable subagent types once synced. |
-| Pressure-scenario files | `skills/*/pressure-scenarios.md` | Adding or editing a scenario needs at least one actual subagent run with pass/fail evidence attached to the PR — a written-but-never-run scenario is a draft, not validated. |
-| Worked examples | `examples/*.md` | Must reflect a real applied case. If no real project has applied the method yet, say so explicitly rather than presenting a plausible-looking fabrication. |
-| Sync/install scripts | `scripts/*.sh`, `scripts/*.py` | This repo's highest-scrutiny category — see cross-cutting rules below. |
-| Third-party plugin pin | `scripts/third-party-plugins.json` | A version bump is a deliberate, reviewed decision (what changed upstream, why it's safe to move to) — not a routine dependency-bot update. |
-| Top-level docs | `README.md`, `README.zh-TW.md` | Update whenever a skill, agent, or script is added, renamed, or removed, and keep the skill list and cross-references accurate. `README.zh-TW.md` may lag briefly but shouldn't drift permanently; `README.md` is authoritative on conflict. |
+One thing from it is worth stating in the README, because it is what a reader evaluating this repo actually wants to know:
 
-**Cross-cutting rules, priority over every row above:**
-
-1. Any change touching a `SKILL.md` or the root `CLAUDE.md` is highest scrutiny full-stop — these become other projects' or every collaborator's governance rules once synced or copied out, and a subtle wording bug (an ambiguous instruction, a dropped exception) propagates silently with no test suite to catch it. Never skip a full diff read because "it's just wording."
-2. Any change to `scripts/*.sh` or `scripts/*.py` is scrutinized *above even that*. A bad SKILL.md edit misleads an AI reading text; a bad script edit *executes*, unattended, with every collaborator's local permissions on every session start. This trade (self-updating via `git pull`, instead of everyone manually re-running `scripts/install.sh` per logic change) only holds if this category actually gets read line-by-line before merge, every time, by someone other than the author.
+- **Two categories must attach evidence to the PR.** A change to a skill file attaches the run of that skill's `pressure-scenarios.md`; a change to a script that runs on collaborators' machines attaches the command and output of running it in a throwaway environment. Neither ranks above the other — they fail in different units, so each states its own requirement rather than sitting on a severity ladder.
 
 **PR granularity:** one skill, one agent, or one fix per PR. This repo's whole purpose is to be diffed and its pieces synced or copied independently, so a PR mixing unrelated changes makes both review and later reverts harder.
 
