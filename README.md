@@ -110,6 +110,8 @@ If you're not on this team's synced setup — evaluating this repo standalone, o
 
 ## This repo's own conventions
 
+`CONTEXT.md` at the root is this repo's glossary — the terms its rules are written in (`Author`, `Reviewer independence`, `Merge gate`, `Local review`, `Cloud review`). It is a glossary and nothing else: no rules, no rationale, no implementation detail. When a rule below or in `CLAUDE.md` uses one of those terms, that file is where the term is pinned down.
+
 This repo dogfoods its own method: `CLAUDE.md` at the root is this repo's *own* change-type-routing table — one row per change type (skill content, agent definitions, pressure-scenario files, worked examples, sync/install scripts, plugin pin, glossary, top-level docs), each stating what a PR in that category must attach, plus cross-cutting rules covering how review works here and who merges.
 
 **That table is deliberately not reproduced here.** It used to be, in both READMEs, and keeping three copies of one table in sync cost more than it was ever worth — a single rewrite of it produced a merge conflict across two languages the first time it was touched. Read `CLAUDE.md`; it is short, and it is the only copy.

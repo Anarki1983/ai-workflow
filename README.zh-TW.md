@@ -110,6 +110,8 @@ bash scripts/install.sh
 
 ## 這個 repo 自己的規範
 
+根目錄的 `CONTEXT.md` 是這個 repo 的詞彙表——它的規則所使用的那些詞（`Author`、`Reviewer independence`、`Merge gate`、`Local review`、`Cloud review`）都定義在那裡。它只是詞彙表，不放規則、不放理由、不放實作細節。下面或 `CLAUDE.md` 的規則用到這些詞時，以那份檔案為準。
+
 這個 repo 自己吃自己的狗食：根目錄的 `CLAUDE.md` 就是這個 repo **自己的** change-type-routing 表——每種改動類型一列（skill 內容、agent 定義、pressure-scenario 檔案、worked example、同步／安裝腳本、plugin 釘選、詞彙表、頂層文件），每一列寫明那一類的 PR 必須附上什麼，外加橫切規則說明這裡的審查怎麼跑、誰負責合併。
 
 **那張表刻意不在這裡重抄一遍。** 以前兩份 README 都各抄了一份，維護三份同一張表的成本遠超過它的價值——它第一次被改寫時就立刻在兩個語言之間製造了一個合併衝突。請直接讀 `CLAUDE.md`，它很短，而且是唯一的一份。
