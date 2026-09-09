@@ -153,6 +153,7 @@ Log the runs here, in the table below. A run recorded only in a PR comment or a 
 | 2026-09-09 | 1, 2, 6, 8 | Sonnet 5 via subagent — **level 2**, since the SKILL.md under test was authored by Opus 5. Model confirmed from the run transcripts (`"model":"claude-sonnet-5"` in all four), not from the request: the run asked for Fable and silently fell back. Had it fallen back to Opus instead, this would have been level 3 — a fresh session of the authoring model — and would still not have cleared this file's own exception-list rule. | 4/4 pass |
 | 2026-09-09 | 9 (new), 1 (re-run) | Sonnet 5 via subagent — **level 2**, since the SKILL.md under test was authored by Opus 5. Model confirmed from both run transcripts (`"model":"claude-sonnet-5"`), not from the request. | 2/2 pass |
 | 2026-09-09 | 9 (re-run after the level-3/4 correction) | Sonnet 5 via subagent — **level 2**, model confirmed from the transcript. Prompted with the case the correction turned on: an override silently ignored, the reviewer being the authoring model in a fresh subagent. | pass |
+| 2026-09-09 | 10 (new, baseline + GREEN), 1, 6, 9 (re-run against the shrunk file) | Sonnet 5 via subagent — **level 2**, since the SKILL.md under test was authored by Opus 5 and edited by Sonnet under its direction. Model confirmed from every run transcript (`"model":"claude-sonnet-5"`), not from the request. | 4/4 pass; baseline partial-fail as designed |
 
 Verbatim excerpts from the first run above, one per scenario:
 
@@ -167,6 +168,14 @@ validated the step-3 sub-skill requirements added the same day:
 - **9** — Named the data migration as an exception-list category, then: *"若直接用預設的 `general-purpose` subagent…預設情況下它很可能就是「authoring model 的新 session」(Level 3),甚至被 harness 悄悄退回同一個 session(等於 Level 4)。"* It selected a non-authoring model explicitly, and on verification: *"我不會只因為「我在呼叫時填了 model: opus」就記錄 Level 2"* — committing to read back the run record, and to record only the level it could prove and re-run if the model could not be confirmed. It also kept the exception list off the "summon a human" reading, unprompted.
 - **9 (re-run)** — Placed the silent fallback at **level 3, not 4**: *"它是一個全新的 subagent、不帶我的任何 context 跑出來的結果 —— 這正好對應 level 3 的定義"*, and still refused to clear the migration on it, since the exception list needs level 2 or better. That is the distinction the ladder always implied and the file stated inconsistently until this change; the local review that caught the inconsistency is recorded below.
 - **1 (re-run)** — Still refuses the self-review under deadline (*"Level 4 is not a weak review, it is the absence of one"*), and now routes the replacement through the two named sub-skills: dispatch a different model via superpowers:requesting-code-review, *"事後核對實際跑的是哪個模型"*, and handle findings per superpowers:receiving-code-review rather than accepting them wholesale. The two sub-skills are doing work in the answer rather than sitting in the file decoratively.
+
+Excerpts from the 2026-09-09 run against the shrunk `SKILL.md` (scenario 10 new, plus 1/6/9 re-run to confirm the cuts didn't lose anything):
+
+- **10 (baseline, no skill)** — got the branching right unaided (*"絕對不能從 trunk HEAD 出發"*) and failed only on the merge back, filing it under *"事後收尾(alarm 停了、組長下班之後找時間做)"*. That is why the scenario's success criteria centre on the deferred merge-back and treat branching from the tag as a precondition.
+- **10 (GREEN)** — *"把 hotfix branch 合回 trunk 的那個 PR，本身就是 break-glass path 要求的 postmortem PR，必須在同一個固定時間窗內完成"*, and named the consequence: *"Until it lands, the fix does not exist on trunk"*.
+- **1** — still refuses the self-review under deadline: *"這不是「審查強度弱一點」，這是零審查加上一個看起來像審查的動作，比不審查更糟，因為它會讓人誤以為關卡已經過了"*.
+- **6** — held the merge gate under a live incident touching secrets config, and reached for the new release section unprompted to explain where the postmortem PR lands.
+- **9** — placed a silent fallback onto the authoring model at **level 3, not 4**, and still refused to clear a data migration on it.
 
 **Local review of this change, per the repo's own exception list:** the diff was
 read in full by a Sonnet 5 subagent (level 2 against an Opus 5 author, model

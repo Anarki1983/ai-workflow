@@ -86,7 +86,9 @@ release is a **tag on trunk**. There are no release branches.
 
 A hotfix to a shipped version branches from that version's tag, is fixed there,
 and is tagged again — the new tag is what drives CI/CD. That branch is then
-merged back into trunk.
+merged back into trunk. During the incident, the new tag drives the deploy
+directly with no human merge gate in front of it — step 5's merge gate applies
+to the PR that merges the hotfix branch back into trunk, not to the tag.
 
 The merge back is the step that gets skipped, at exactly the moment it is most
 likely to be: the incident is over and production is healthy. So it is not a
