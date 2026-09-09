@@ -5,10 +5,24 @@ Fail-soft by design: any unexpected error becomes a warning line on stdout,
 never a non-zero exit that could block the SessionStart hook. Prints one
 plain-text warning per line for scripts/sync.sh to collect; prints nothing
 when everything already matches.
+
+Version tracking is advisory and semver-only. `claude plugin install` has no
+flag to request a specific version, so a missing plugin is always installed at
+whatever the marketplace currently serves; the manifest records what the team
+agreed on, and drift from it is reported, never forced. A plugin whose entry
+omits "version" is deliberately untracked: some marketplace plugins are
+versioned by the marketplace repo's own commit sha, which changes on every
+upstream commit, so comparing it would warn forever and teach everyone to
+ignore the warnings.
 """
 import json
+import re
 import subprocess
 import sys
+
+# Matches a semver-shaped version string; anything else (a commit sha, a date,
+# a branch name) is not a version this script knows how to compare.
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
 
 def warn(msg: str) -> None:
@@ -84,6 +98,17 @@ def main() -> int:
                     warn(f"failed to auto-install {key}: {install.stderr.strip()[:200]}")
             except Exception as e:
                 warn(f"failed to auto-install {key}: {e}")
+            continue
+
+        if pinned_version is None:
+            continue  # deliberately untracked: follows whatever the marketplace serves
+
+        if not SEMVER_RE.match(str(pinned_version)):
+            warn(
+                f"third-party plugin pin for {key} is not a comparable version "
+                f"({pinned_version!r}); drop the \"version\" field to track it as "
+                f"marketplace-versioned, or set a semver value"
+            )
             continue
 
         if have != pinned_version:

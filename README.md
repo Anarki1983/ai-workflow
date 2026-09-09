@@ -88,7 +88,7 @@ That one-time step: backs up `~/.claude/settings.json`, points its `SessionStart
 
 1. Pulls this repo.
 2. Symlinks each `skills/*` and `agents/*` subdirectory into the collaborator's global `~/.claude/skills/` and `~/.claude/agents/` — skipping (and warning about, never overwriting) anything already at that path that isn't already this repo's own symlink. It also removes the reverse: a link this repo created for a skill or agent that no longer exists here is deleted and reported, so renaming or deleting one propagates instead of leaving a dangling link on every machine. That prune is deliberately narrow — only a symlink pointing into this repo whose target is gone; a real directory, another tool's link, or a live link is never touched.
-3. Reconciles third-party plugins against `scripts/third-party-plugins.json` (see below) — installs anything missing, warns on version drift, never force-changes an installed version.
+3. Reconciles third-party plugins against `scripts/third-party-plugins.json` (see below) — installs anything missing, reports drift from a recorded version, never force-changes an installed version.
 
 This makes already-onboarded collaborators self-healing: add a skill to this repo, and everyone picks it up on their next session, no manual re-sync. The one thing this can't solve is a brand-new collaborator's very first install — nothing enforces that `scripts/install.sh` gets run, since nothing runs until it has; that's a one-time onboarding step, documented, not a mechanism.
 
@@ -98,7 +98,11 @@ This makes already-onboarded collaborators self-healing: add a skill to this rep
 
 ## Keeping third-party plugins consistent
 
-`scripts/third-party-plugins.json` pins the exact version of each team-authored-elsewhere plugin (superpowers, mattpocock-skills, etc.) this team has agreed on. `scripts/sync.sh` checks every session: missing entirely → auto-installs; installed but the wrong version → warns (in both directions, behind or ahead of the pin) rather than forcing a change, since the `claude plugin` CLI has no exact-version-install/downgrade command to force it. Bumping the pinned version is a deliberate, reviewed edit to that file, not a routine update — see `CLAUDE.md`'s table for the review bar on it.
+`scripts/third-party-plugins.json` lists the third-party plugins (superpowers, mattpocock-skills, etc.) this team expects on every machine. `scripts/sync.sh` checks every session: missing entirely → auto-installs; installed at a different version than the one recorded → warns (in both directions, behind or ahead) rather than forcing a change.
+
+**Version tracking here is advisory, not a real pin, and the manifest says so.** `claude plugin install` has no flag to request a specific version, so a missing plugin is always installed at whatever the marketplace currently serves — the recorded version can be reported against, never enforced. It is also **semver-only**: an entry that omits `version` is deliberately untracked, which is the right setting for a plugin the marketplace versions by its own repo commit sha (that sha changes on every upstream commit, so comparing it would warn on every session forever, and a warning that always fires is a warning nobody reads). A non-semver value left in a `version` field is reported as a manifest error, not compared.
+
+Adding a plugin or changing a recorded version is a deliberate, reviewed edit to that file, not a routine update — see `CLAUDE.md`'s table for the review bar on it.
 
 ## For projects or people outside this team
 

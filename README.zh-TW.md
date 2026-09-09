@@ -88,7 +88,7 @@ bash scripts/install.sh
 
 1. `git pull` 這個 repo。
 2. 把 `skills/*`、`agents/*` 底下每個子目錄 symlink 進協作者全域的 `~/.claude/skills/`、`~/.claude/agents/`——如果該路徑已經有東西、而且不是這個 repo 建的 symlink，就跳過並警告，絕不覆蓋。反方向也會處理：這個 repo 建過、但對應的 skill 或 agent 已經不存在的連結會被刪掉並回報，所以改名或刪除才會真的傳播出去，而不是在每台機器上留下一個死連結。這個清理刻意做得很窄——只清「指向這個 repo、而且目標已經消失」的 symlink；真實目錄、別的工具建的連結、還活著的連結，一律不動。
-3. 對照 `scripts/third-party-plugins.json`（見下）核對第三方 plugin——缺的就裝，版本對不上就警告，絕不強制改版本。
+3. 對照 `scripts/third-party-plugins.json`（見下）核對第三方 plugin——缺的就裝，跟記錄的版本對不上就警告，絕不強制改版本。
 
 這讓已經裝好的協作者能自我修復：repo 加了新 skill，大家下次開 session 就會自動拿到，不用手動重新同步。唯一沒辦法解決的，是全新協作者的第一次安裝——沒人能強制他跑 `scripts/install.sh`，因為在他跑之前什麼機制都還沒生效；這是一個文件化的 onboarding 步驟，不是機制。
 
@@ -98,7 +98,11 @@ bash scripts/install.sh
 
 ## 保持第三方 plugin 版本一致
 
-`scripts/third-party-plugins.json` 釘住這個團隊談好的每個外部 plugin（superpowers、mattpocock-skills 等）的確切版本。`scripts/sync.sh` 每次 session 都會檢查：完全沒裝就自動裝；裝了但版本不對就警告（落後或超前都會報），不強制改版本——因為 `claude plugin` 這支 CLI 沒有能強制裝回指定版本的參數。要改動釘住的版本，是對這份檔案的一次刻意、需要審查的編輯，不是例行更新——審查標準見 `CLAUDE.md` 的分類表。
+`scripts/third-party-plugins.json` 列出這個團隊要求每台機器都要有的第三方 plugin（superpowers、mattpocock-skills 等）。`scripts/sync.sh` 每次 session 都會檢查：完全沒裝就自動裝；裝了但版本跟記錄的不一樣就警告（落後或超前都會報），不強制改版本。
+
+**這裡的版本追蹤是「參考記錄」，不是真的釘選，而且 manifest 裡就是這樣寫的。** `claude plugin install` 沒有指定版本的參數，所以缺的 plugin 一定是裝 marketplace 當下提供的版本——記錄下來的版本只能拿來比對回報，無法強制。它同時**只支援 semver**：沒有 `version` 欄位的項目就是刻意不追版本，對於那些由 marketplace repo 自己的 commit sha 當版本號的 plugin 來說這才是正確設定（那個 sha 每次上游 commit 都會變，拿來比對就會每個 session 永遠警告，而一個永遠會響的警告等於沒有警告）。`version` 欄位裡留了非 semver 的值，會被當成 manifest 設定錯誤回報，不會拿去比對。
+
+新增一個 plugin 或改動記錄的版本，是對這份檔案的一次刻意、需要審查的編輯，不是例行更新——審查標準見 `CLAUDE.md` 的分類表。
 
 ## 給這個團隊以外的專案或人
 
