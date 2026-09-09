@@ -112,25 +112,15 @@ bash scripts/install.sh
 
 根目錄的 `CONTEXT.md` 是這個 repo 的詞彙表——它的規則所使用的那些詞（`Author`、`Reviewer independence`、`Merge gate`、`Local review`、`Cloud review`）都定義在那裡。它只是詞彙表，不放規則、不放理由、不放實作細節。下面或 `CLAUDE.md` 的規則用到這些詞時，以那份檔案為準。
 
-這個 repo 對自己套用了同一套方法：根目錄的 `CLAUDE.md` 就是這個 repo 自己的 change-type-routing 表（skill 內容、agent 定義、pressure-scenario 檔案、worked examples、同步／安裝腳本、頂層文件），外加橫切規則把治理檔案跟同步腳本的改動列為這裡風險最高的兩類——腳本又比治理檔案更高，因為腳本會無人看管地執行，文字只會被讀。下面是摘要——跟 `CLAUDE.md` 有出入時以它為準。
+這個 repo 自己吃自己的狗食：根目錄的 `CLAUDE.md` 就是這個 repo **自己的** change-type-routing 表——每種改動類型一列（skill 內容、agent 定義、pressure-scenario 檔案、worked example、同步／安裝腳本、plugin 釘選、詞彙表、頂層文件），每一列寫明那一類的 PR 必須附上什麼，外加橫切規則說明這裡的審查怎麼跑、誰負責合併。
 
-**各類改動、合併前各自要求什麼：**
+**那張表刻意不在這裡重抄一遍。** 以前兩份 README 都各抄了一份，維護三份同一張表的成本遠超過它的價值——它第一次被改寫時就立刻在兩個語言之間製造了一個合併衝突。請直接讀 `CLAUDE.md`，它很短，而且是唯一的一份。
 
-| 改動類型 | 檔案 | 要求什麼 |
-|---|---|---|
-| Skill 內容 | `skills/*/SKILL.md` | Frontmatter 的 `description` 要維持「Use when...」這種只講觸發時機的寫法——絕不能拿來總結 skill 的工作流程。任何內容變更合併前都要拿那個 skill 自己的 `pressure-scenarios.md` 重新驗證過，並留下 transcript 證據。 |
-| Agent 定義 | `agents/*` | 標準跟 skill 內容一樣——合併前要完整讀過，因為一旦同步出去，這些會變成每個協作者能叫用的 subagent 類型。 |
-| Pressure-scenario 檔案 | `skills/*/pressure-scenarios.md` | 新增或修改情境，PR 裡至少要附一次真的拿 subagent 跑過的 pass/fail 證據——寫好但沒跑過的情境只是草稿，不算驗證過。 |
-| Worked examples | `examples/*.md` | 必須對應一個真實套用過的案例。如果目前還沒有專案真的用過這個方法，就要在檔案裡明講，不能生一個看起來合理但是編出來的案例。 |
-| 同步／安裝腳本 | `scripts/*.sh`、`scripts/*.py` | 這個 repo 風險最高的一類——見下面的橫切規則。 |
-| 第三方 plugin 釘選版本 | `scripts/third-party-plugins.json` | 改版本號是一次刻意、需要審查的決定（上游改了什麼、為什麼現在升級是安全的）——不是例行的依賴更新。 |
-| 頂層文件 | `README.md`、`README.zh-TW.md` | 只要新增、改名或移除 skill、agent 或腳本，就要更新，並確認 skill 清單跟交叉引用都還對得上。`README.zh-TW.md` 可以短暫落後，但不該永久漂移；兩份不同步時以 `README.md` 為準。 |
+其中兩件事值得寫在 README，因為那是評估這個 repo 的人真正想知道的：
 
-**橫切規則，優先於上面表格的每一列：**
+- **機械檢查跑在 CI 上**，每個 PR 與每次推上 `main` 都會跑：`shellcheck` 掃 shell 腳本、Python 語法與 JSON 合法性檢查，以及 `scripts/check_repo.py`——它抓的是純文件 repo 裡會無聲腐爛的那些東西：新增了 skill 卻沒寫進 README、frontmatter 的 `description` 又滑回去總結工作流程、某個 skill 沒有 `pressure-scenarios.md` 可以驗證。它隨時可以手動跑。這個 repo 沒有 branch protection，所以 CI 是回報，不是閘門。
+- **有兩類改動必須在 PR 附上證據。** 改 skill 檔案要附那個 skill 的 `pressure-scenarios.md` 執行結果；改動會在協作者機器上執行的腳本，要附在用完即丟的環境裡跑過的指令與輸出。兩者不分高下——它們的失效不同單位，所以各自寫自己的要求，而不是排在同一條嚴重性階梯上。
 
-1. 任何動到 `SKILL.md` 或根目錄 `CLAUDE.md` 的改動都是最高風險等級，沒有例外——這些檔案一旦被同步或複製出去，就會變成其他專案、每個協作者的治理規則，一個不起眼的措辭問題（一個模糊的指示、被漏掉的例外）會悄悄擴散出去，而且沒有任何測試套件能抓到。不要因為「只是改個措辭」就跳過完整讀 diff。
-2. 動到 `scripts/*.sh` 或 `scripts/*.py` 的改動,風險等級**比上面那條還高**。一個寫壞的 SKILL.md 頂多誤導讀文字的 AI；一個寫壞的腳本會在每個協作者機器上、每次 session 啟動時，用他們本地權限**無人看管地執行**。這個交易（腳本透過 `git pull` 自我更新，而不用每個協作者每次邏輯變動都手動重跑 `scripts/install.sh`）只有在這一類真的每次都被作者以外的人逐行讀過才成立。
-
-**PR 顆粒度：** 一個 skill、一個 agent，或一個修復，各自一個 PR。這個 repo 存在的意義就是要能被拆開來 diff、被獨立同步或複製，把不相關的改動綁在同一個 PR 裡，只會讓審查跟之後的回退都更難。
+**PR 粒度**：一個 skill、一個 agent 或一個修正一個 PR。這個 repo 存在的意義就是被 diff、被獨立同步或複製，所以混了不相關改動的 PR 會讓審查和日後的還原都更難。
 
 **語言：** skill、agent、文件內容（包含腳本註解）都用英文寫；`README.zh-TW.md` 是唯一刻意保留的翻譯例外，不該永久落後 `README.md` 太多。這跟 session 本身用什麼語言討論這個 repo 無關。
