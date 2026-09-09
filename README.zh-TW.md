@@ -44,4 +44,25 @@ bash scripts/install.sh
 
 ## 這個 repo 自己的規範
 
-這個 repo 對自己套用了同一套方法：根目錄的 `CLAUDE.md` 就是這個 repo 自己的 change-type-routing 表（skill 內容、agent 定義、pressure-scenario 檔案、worked examples、同步／安裝腳本、頂層文件），外加橫切規則把治理檔案跟同步腳本的改動列為這裡風險最高的兩類——腳本又比治理檔案更高，因為腳本會無人看管地執行，文字只會被讀。
+這個 repo 對自己套用了同一套方法：根目錄的 `CLAUDE.md` 就是這個 repo 自己的 change-type-routing 表（skill 內容、agent 定義、pressure-scenario 檔案、worked examples、同步／安裝腳本、頂層文件），外加橫切規則把治理檔案跟同步腳本的改動列為這裡風險最高的兩類——腳本又比治理檔案更高，因為腳本會無人看管地執行，文字只會被讀。下面是摘要——跟 `CLAUDE.md` 有出入時以它為準。
+
+**各類改動、合併前各自要求什麼：**
+
+| 改動類型 | 檔案 | 要求什麼 |
+|---|---|---|
+| Skill 內容 | `skills/*/SKILL.md` | Frontmatter 的 `description` 要維持「Use when...」這種只講觸發時機的寫法——絕不能拿來總結 skill 的工作流程。任何內容變更合併前都要拿那個 skill 自己的 `pressure-scenarios.md` 重新驗證過，並留下 transcript 證據。 |
+| Agent 定義 | `agents/*` | 標準跟 skill 內容一樣——合併前要完整讀過，因為一旦同步出去，這些會變成每個協作者能叫用的 subagent 類型。 |
+| Pressure-scenario 檔案 | `skills/*/pressure-scenarios.md` | 新增或修改情境，PR 裡至少要附一次真的拿 subagent 跑過的 pass/fail 證據——寫好但沒跑過的情境只是草稿，不算驗證過。 |
+| Worked examples | `examples/*.md` | 必須對應一個真實套用過的案例。如果目前還沒有專案真的用過這個方法，就要在檔案裡明講，不能生一個看起來合理但是編出來的案例。 |
+| 同步／安裝腳本 | `scripts/*.sh`、`scripts/*.py` | 這個 repo 風險最高的一類——見下面的橫切規則。 |
+| 第三方 plugin 釘選版本 | `scripts/third-party-plugins.json` | 改版本號是一次刻意、需要審查的決定（上游改了什麼、為什麼現在升級是安全的）——不是例行的依賴更新。 |
+| 頂層文件 | `README.md`、`README.zh-TW.md` | 只要新增、改名或移除 skill、agent 或腳本，就要更新，並確認 skill 清單跟交叉引用都還對得上。`README.zh-TW.md` 可以短暫落後，但不該永久漂移；兩份不同步時以 `README.md` 為準。 |
+
+**橫切規則，優先於上面表格的每一列：**
+
+1. 任何動到 `SKILL.md` 或根目錄 `CLAUDE.md` 的改動都是最高風險等級，沒有例外——這些檔案一旦被同步或複製出去，就會變成其他專案、每個協作者的治理規則，一個不起眼的措辭問題（一個模糊的指示、被漏掉的例外）會悄悄擴散出去，而且沒有任何測試套件能抓到。不要因為「只是改個措辭」就跳過完整讀 diff。
+2. 動到 `scripts/*.sh` 或 `scripts/*.py` 的改動,風險等級**比上面那條還高**。一個寫壞的 SKILL.md 頂多誤導讀文字的 AI；一個寫壞的腳本會在每個協作者機器上、每次 session 啟動時，用他們本地權限**無人看管地執行**。這個交易（腳本透過 `git pull` 自我更新，而不用每個協作者每次邏輯變動都手動重跑 `scripts/install.sh`）只有在這一類真的每次都被作者以外的人逐行讀過才成立。
+
+**PR 顆粒度：** 一個 skill、一個 agent，或一個修復，各自一個 PR。這個 repo 存在的意義就是要能被拆開來 diff、被獨立同步或複製，把不相關的改動綁在同一個 PR 裡，只會讓審查跟之後的回退都更難。
+
+**語言：** skill、agent、文件內容（包含腳本註解）都用英文寫；`README.zh-TW.md` 是唯一刻意保留的翻譯例外，不該永久落後 `README.md` 太多。這跟 session 本身用什麼語言討論這個 repo 無關。
