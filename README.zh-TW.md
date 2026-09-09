@@ -135,6 +135,7 @@ bash scripts/install.sh
 | Agent definitions | `agents/*` | 標準跟 skill 內容一樣：合併前要完整讀過，因為一旦同步出去，這些會變成每個協作者能叫用的 subagent 類型。 |
 | Pressure-scenario files | `skills/*/pressure-scenarios.md` | 新增或修改情境，至少要附一次真的拿 subagent 跑過的 pass/fail 證據到 PR 上——寫好但沒跑過的情境不算驗證過，只是草稿。 |
 | Worked examples | `examples/*.md` | 必須對應一個真實套用過的案例。如果目前還沒有專案真的用過這個方法，就要在檔案裡明講，不能生一個看起來合理但是編出來的案例。 |
+| Design specs and plans | `docs/superpowers/specs/*`、`docs/superpowers/plans/*` | 這是一個決策和它的論證的紀錄，不是任何人會自動遵循的規則，所以不需要跑 pressure scenario。它必須指名自己實作的 spec（plan）或自己收斂的討論（spec）；工作合併之後不會回頭改寫它去符合實際做出來的東西，而是另外寫一份取代它的文件。 |
 | Scripts that run on a collaborator's machine | `scripts/sync.sh`、`scripts/install.sh`、`scripts/sync_plugins.py` | 改過的腳本必須在用完即丟的環境裡實際跑過（假的 `CLAUDE_CONFIG_DIR`、假的 `HOME`、暫時的 repo——能隔離就行），指令與輸出要附在 PR 上。絕對不要為了「確認它能動」而在真實機器上跑。讀程式碼得到的是它看起來會做什麼；跑一次才知道它實際碰了哪些檔案。 |
 | Third-party plugin pin | `scripts/third-party-plugins.json` | 改版本號是一次刻意、需要審查的決定（上游改了什麼、為什麼現在升級是安全的），不是例行的依賴更新——這一類為什麼存在，見 `skills/team-review-pipeline/SKILL.md` 的未鎖定依賴那一列。 |
 | Glossary | `CONTEXT.md` | 改動或移除一個詞，代表所有用到它的文件都要在同一個 PR 裡一起改——一個同時有兩種活著的意思的詞，比沒有詞彙表更糟。只放定義：不放規則、不放理由、不放實作細節。 |

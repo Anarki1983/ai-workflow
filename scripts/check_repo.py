@@ -6,6 +6,7 @@ without being mentioned in the README, a frontmatter description that drifts
 back into summarising the workflow, a skill with no scenarios to validate it
 against. Exits non-zero with one line per problem.
 """
+import os
 import pathlib
 import re
 import sys
@@ -43,6 +44,43 @@ def change_type_keys(path, header_cell):
             continue  # separator row
         rows.append(cells[0])
     return rows
+
+
+SUPERPOWERS_GLOB = "plugins/cache/*/superpowers/*/skills"
+
+
+def superpowers_skill_names():
+    """Skill directory names in the installed superpowers, or None if absent.
+
+    The override table in CLAUDE.md names upstream skills. If upstream renames
+    or removes one, the table silently starts pointing at nothing -- exactly
+    the kind of rot no test anywhere else catches. Returns None (rather than an
+    empty set) when superpowers cannot be located, so a machine without it
+    reports nothing instead of reporting everything as missing.
+    """
+    config = pathlib.Path(os.environ.get("CLAUDE_CONFIG_DIR", pathlib.Path.home() / ".claude"))
+    names = set()
+    for skills_dir in config.glob(SUPERPOWERS_GLOB):
+        names.update(p.name for p in skills_dir.iterdir() if p.is_dir())
+    return names or None
+
+
+def check_override_table(problems):
+    """Every superpowers skill named in CLAUDE.md's override table must exist."""
+    named = change_type_keys(ROOT / "CLAUDE.md", "superpowers skill")
+    if not named:
+        problems.append("CLAUDE.md: could not find the superpowers override table")
+        return
+    installed = superpowers_skill_names()
+    if installed is None:
+        return  # superpowers not installed here; nothing to check against
+    for name in named:
+        bare = name.strip("`").removeprefix("superpowers:")
+        if bare not in installed:
+            problems.append(
+                f"CLAUDE.md override table names {bare!r}, which is not a skill in "
+                f"the installed superpowers"
+            )
 
 
 def main():
@@ -86,6 +124,8 @@ def main():
 
         if name not in readme:
             problems.append(f"skills/{name}/ is not mentioned anywhere in README.md")
+
+    check_override_table(problems)
 
     # README.zh-TW.md keeps a deliberate translation of CLAUDE.md's change-type
     # table -- the one duplication in this repo that is on purpose, so Chinese
