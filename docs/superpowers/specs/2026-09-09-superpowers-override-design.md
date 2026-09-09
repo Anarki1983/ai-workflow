@@ -72,9 +72,10 @@ then fails CI instead of leaving the table pointing at nothing.
 
 ## 2. `skills/team-review-pipeline/SKILL.md` shrinks
 
-Currently 3047 words. Target 1200–1400. Nothing is deleted as a *rule*;
+Currently 3047 words. Nothing is deleted as a *rule*;
 everything cut is a restatement of a skill that says it better, replaced by a
-reference.
+reference. The cut list is the requirement and the resulting length is its consequence: the sections
+kept below weigh 1892 words on their own, so no word target is set here.
 
 **Kept in full** (all original, none of it in superpowers): who reads a diff
 and the two specific reasons; the independence ladder; "the level reached is

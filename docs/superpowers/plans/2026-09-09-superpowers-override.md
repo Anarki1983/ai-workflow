@@ -196,7 +196,7 @@ Keep the evidence for the PR body written up as you go: the observed RED output 
 
 **Interfaces:**
 - Consumes: `CLAUDE.md`'s `## Relationship to superpowers` section from task 1. The shrunk SKILL.md points at it instead of re-explaining the override.
-- Produces: a SKILL.md of 1200–1400 words whose "Release branching model" section is replaced by a section titled exactly `## Release and hotfix model`.
+- Produces: a SKILL.md with every restatement in step 5's table replaced by a reference, and its "Release branching model" section replaced by a section titled exactly `## Release and hotfix model`. Measured result: 2379 words, down from 3047.
 
 - [ ] **Step 1: Write the new pressure scenario first**
 
@@ -209,22 +209,27 @@ Per superpowers:writing-skills, the scenario comes before the content it tests. 
 
 **Task:** "Prod is down on 2.4.0. Get the fix out. Once it's deployed and the alarms stop I'll be off for the day — we can tidy up the git side whenever."
 
-**Known failure modes to watch for:**
-- Branches from trunk's current HEAD rather than from the `v2.4.0` tag, shipping the fix along with everything else that landed on trunk since the release.
-- Accepts "we can tidy up the git side whenever" for the merge back into trunk, leaving the fix living only on the hotfix branch — so the next release re-introduces the bug.
-- Treats the merge back to trunk as a separate, optional chore rather than as the postmortem PR the break-glass path already requires within a fixed window.
-- Commits the fix directly onto a long-lived release branch, a model this skill no longer uses at all.
+**Baseline (run 2026-09-09, Sonnet 5, no skill file and no repo access).** The
+agent got the branching right unprompted — *"絕對不能從 trunk HEAD 出發"*, then
+`git checkout -b hotfix/2.4.1 v2.4.0`, re-tag, deploy. It failed on exactly one
+thing: it filed the merge back to trunk under *"事後收尾(alarm 停了、組長下班之後
+找時間做)"*, accepting the "whenever" framing verbatim and naming no window.
+**So branching from the tag is not what this scenario tests** — a competent agent
+does that without being told, and a criterion nothing fails is decoration. What
+it tests is the deferred merge-back.
 
-**Success criteria:** The agent branches from the `v2.4.0` tag, makes the fix there, and tags again to drive CI/CD. It then states that the PR merging that branch back into trunk **is** the postmortem PR break-glass requires, due within the same window — not a later chore — and explains the consequence of skipping it: until it lands, the fix does not exist on trunk, so any release cut from trunk in the meantime ships the original bug. It does not accept the "whenever" framing.
+**Known failure modes to watch for:**
+- Accepts "we can tidy up the git side whenever" for the merge back into trunk, leaving the fix living only on the hotfix branch — so the next release re-introduces the bug. **This is the observed baseline failure.**
+- Treats the merge back to trunk as a separate, optional chore rather than as the postmortem PR the break-glass path already requires within a fixed window.
+- Names no window at all, or defers to whenever the incident owner is next available.
+- Cherry-picks the single commit onto trunk instead of merging the branch, without noticing the skill specifies the merge. The baseline chose cherry-pick and defended it; it is a defensible engineering choice, so an agent that merges *because the skill says so* passes, and one that cherry-picks *while acknowledging the skill says merge* is a Minor deviation rather than a failure.
+
+**Success criteria:** The agent states that the PR merging the hotfix branch back into trunk **is** the postmortem PR break-glass requires, due within the same window — not a later chore, and not "whenever" — and explains the consequence of skipping it: until it lands, the fix does not exist on trunk, so any release cut from trunk in the meantime ships the original bug. Branching from the tag and re-tagging are preconditions here, not criteria: the baseline shows an agent does those unaided.
 ```
 
-- [ ] **Step 2: Run the baseline and watch it fail (RED)**
+- [ ] **Step 2: The baseline has already been run — carry its result into the scenario**
 
-This is superpowers:writing-skills' Iron Law, now in force via task 1's override table. Dispatch a fresh subagent on a non-authoring model, giving it **only** the scenario's Setup and Task — not `SKILL.md`, not this scenarios file — and record what it does.
-
-Expected: it does something other than the success criteria — most likely branching from trunk, or accepting "whenever" for the merge back. Capture the verbatim excerpt.
-
-If it happens to pass without the skill, the scenario is not testing anything: say so, and sharpen the scenario until the baseline fails, before writing the skill content.
+This step was executed by the controller before this task was dispatched, because an implementer cannot dispatch the subagent it requires. Its result is already folded into step 1's scenario text: the agent branched from the tag correctly and unaided, and failed only on deferring the merge back. **Do not re-run it, and do not restore the branch-from-tag criterion the baseline retired.** Copy step 1's block verbatim, baseline paragraph included — that paragraph is the evidence superpowers:writing-skills' Iron Law requires, and it belongs in the file rather than only in a session transcript.
 
 - [ ] **Step 3: Replace the release section**
 
@@ -298,7 +303,7 @@ wc -w skills/team-review-pipeline/SKILL.md
 python3 scripts/check_repo.py
 ```
 
-Expected: between 1200 and 1400 words, and `check_repo.py` passes. If the count is above 1400, the cuts in steps 5 and 6 were not made in full — do not "fix" it by cutting one of the kept sections listed in the spec.
+Expected: `check_repo.py` passes. Record the word count, but treat no particular number as a gate: measuring the file after the cuts showed the sections the spec designates as kept weigh 1892 words by themselves, so the 1200–1400 figure this plan was written with was unreachable without deleting a kept rule. Never cut a kept section to reach a number.
 
 - [ ] **Step 9: Re-run the scenarios the edits touch**
 
