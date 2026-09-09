@@ -36,8 +36,39 @@ sync_dir() {
     ln -s "$src_abs" "$dst" 2>/dev/null || WARNINGS+=("failed to link $kind/$name into $dst_root")
   done
 }
+# Remove links this repo created for skills/agents it no longer has. Without
+# this the sync is add-only: renaming or deleting a skill here leaves a
+# dangling symlink in every collaborator's ~/.claude/ forever, and nothing
+# ever reports it. Deliberately narrow, because this deletes files unattended
+# -- only a symlink whose literal target is inside $REPO_DIR/$kind/ *and* no
+# longer resolves is removed. A real directory, another tool's symlink, or a
+# live link is never touched.
+prune_dir() {
+  local kind="$1" # "skills" or "agents"
+  local dst_root="$CLAUDE_DIR/$kind"
+  [ -d "$dst_root" ] || return 0
+  local dst target name
+  for dst in "$dst_root"/*; do
+    [ -L "$dst" ] || continue
+    target="$(readlink "$dst")"
+    case "$target" in
+      "$REPO_DIR/$kind/"*) ;;
+      *) continue ;; # not ours to remove
+    esac
+    [ -d "$target" ] && continue # still a live skill/agent
+    name="$(basename "$dst")"
+    if rm -f "$dst"; then
+      WARNINGS+=("removed stale $kind/$name link: no longer exists in ai-workflow")
+    else
+      WARNINGS+=("failed to remove stale $kind/$name link at $dst")
+    fi
+  done
+}
+
 sync_dir skills
 sync_dir agents
+prune_dir skills
+prune_dir agents
 
 # --- 2. Reconcile pinned third-party plugins ---
 MANIFEST="$REPO_DIR/scripts/third-party-plugins.json"
