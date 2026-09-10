@@ -33,7 +33,7 @@ Depth here is not "how much of the diff a human reads." It is **how uncorrelated
 
 Level 4 is not a weak review, it is the absence of one; treat a pipeline that relies on it as unreviewed. **Every project writes the level it actually reaches into its own `change-type-routing` table**, as a concrete row, because a ladder that lives only in this generic skill is a ladder nobody is standing on.
 
-**The level reached is verified, not requested.** Asking for a particular reviewer is not evidence you got one: a model override can be ignored or silently fall back to a default, and a fallback that lands on the authoring model turns a claimed level 2 into an actual level 3 — or into a level 4 that only looks like a review, if what answered was the authoring session itself — with nothing to show it. Read back what actually ran — the transcript, the run metadata, whatever the harness records — before writing a level down. A pipeline whose independence guarantee rests on an unverified request is not at the level it thinks it is, and this is exactly the failure superpowers:verification-before-completion exists to prevent, applied to review instead of to tests.
+**The level reached is verified, not requested.** Asking for a particular reviewer is not evidence you got one: a model override can be ignored or silently fall back to a default, and a fallback that lands on the authoring model turns a claimed level 2 into an actual level 3 — or into a level 4 that only looks like a review, if what answered was the authoring session itself — with nothing to show it. Asking the reviewer what it is doesn't close the gap either: a subagent given an explicit model override has opened its report by confidently naming itself as that model, model ID included, while its actual run transcript showed a different model had answered — a self-report is not a run record any more than a request is. Read back what actually ran — the transcript, the run metadata, whatever the harness records — before writing a level down. A pipeline whose independence guarantee rests on an unverified request is not at the level it thinks it is, and this is exactly the failure superpowers:verification-before-completion exists to prevent, applied to review instead of to tests.
 
 The transport does not matter and must not be written into the rule. A subagent running a different model, a second provider over MCP, a cloud review service — these are implementations of level 2, and prescribing one of them (an earlier version of this skill mandated MCP) rules out setups that reach the same level by another route.
 
@@ -54,54 +54,81 @@ Note what this list no longer says: it does not summon a human to read the code.
 
 Add this list as a cross-cutting rule in the project's `change-type-routing` table rather than tracking it separately. A project may extend the list; it must not shrink it without the project owner explicitly signing off.
 
-**Tests are still written first, and this still matters here.** A retrofitted test confirms the code did whatever it did — it proves nothing about what the code *should* do, because it was written with the implementation already in view. **REQUIRED SUB-SKILL:** superpowers:test-driven-development governs step 2 of the dev flow below. This is no longer load-bearing for *review depth* (reviewers read the whole diff now, not just the tests), but it is load-bearing for whether the tests mean anything at all as a statement of intent.
+**REQUIRED SUB-SKILL:** superpowers:test-driven-development governs step 2. Its own argument for why a retrofitted test proves nothing is not repeated here.
 
 ## Dev flow, with the loop-exits and evidence gates made explicit
 
-0. **Isolate the work.** Before implementation starts, set up an isolated workspace. **REQUIRED SUB-SKILL:** superpowers:using-git-worktrees. On a team where multiple people or multiple AI agents touch the same repo concurrently, skipping this step means uncommitted state, lockfiles, and half-finished test runs collide across work streams — "we agreed on separate scopes" is a social contract, not a mechanism, and it doesn't hold under real concurrency.
+0. **Isolate the work.** **REQUIRED SUB-SKILL:** superpowers:using-git-worktrees, before implementation starts. On a team where several people or agents touch one repo at once, uncommitted state and half-finished test runs collide across work streams — an agreement about scopes is a social contract, not a mechanism.
 1. Doc/architecture gate — the change fits the project's documented architecture rules (produced by `change-type-routing`) before anything is implemented.
-2. AI implements test-first and iterates until the tests pass. **REQUIRED SUB-SKILL:** superpowers:test-driven-development (RED before GREEN, no exceptions) and superpowers:verification-before-completion — "tests pass" may only be claimed after actually running the verification command and reading its output in this session; an agent's own unverified success report, or "should pass now," is not evidence.
+2. AI implements test-first. **REQUIRED SUB-SKILL:** superpowers:test-driven-development and superpowers:verification-before-completion.
 3. **Local review.** A reviewer at the project's declared independence level reads the full diff, before a PR exists. This is the layer that matters most, because it is the only one that runs while the change is still cheap to redirect. It is not optional and it is not a human step; a project whose declared level is 4 has not configured this step, it has skipped it.
-   - **REQUIRED SUB-SKILL:** superpowers:requesting-code-review supplies the mechanics — the SHA range, the reviewer prompt template, context crafted for the reviewer instead of the session's history, and a reviewer that does not spawn reviewers of its own. What it does not supply is independence: it dispatches a `general-purpose` subagent, which absent a configured default reviewing model runs the authoring model in a fresh session — **level 3 on the ladder above, and level 4 if the harness hands the work back to the authoring session**. Choosing the reviewing model, and reading back which one actually answered, is this pipeline's requirement on top of that skill, not something that skill does for you.
+   - **REQUIRED SUB-SKILL:** superpowers:requesting-code-review supplies the mechanics — the SHA range, the reviewer prompt template, context crafted for the reviewer instead of the session's history, and a reviewer that does not spawn reviewers of its own. What it does not supply is independence: its default reviewer, absent a configured model, lands at level 3 on the ladder above, or level 4 if the harness answers from the authoring session. The authoritative statement of this override — what this pipeline requires on top of that skill — lives in the `ai-workflow` repo's own `CLAUDE.md`, under **## Relationship to superpowers**.
    - **REQUIRED SUB-SKILL:** superpowers:receiving-code-review governs what happens to findings, from this layer and from step 4's: verify each one against the codebase before implementing it, push back with technical reasoning where the reviewer is wrong, and never perform agreement. A reviewer at level 2 is worth having precisely because it disagrees with you; an author who implements every finding on sight has converted an independent review back into a rubber stamp from the other end.
 4. Open a PR, with step 2's fresh verification output attached (not just a claim it passed). Run the project's concrete cloud-review mechanism — e.g. `/code-review ultra <PR#>` for Claude Code's own multi-agent cloud review — for consistency; findings go back to the local agent, handled per step 3's superpowers:receiving-code-review requirement, repeating until the review passes.
    - **Cap this loop at 3 rounds.** If cloud review and local fixes haven't converged after 3 rounds, stop looping and escalate to a human, and record the escalation in the project's audit trail (its Notion log, or whatever the project actually uses to track this) — don't let it live only in the session's memory. Write the number 3 into the project's own `change-type-routing` table as a cross-cutting rule (see below); a cap that only exists as prose in this generic skill is a cap nobody actually enforces. A project may raise or lower the number for its own risk tolerance, but it must be a concrete number on record.
    - **What escalation means.** The human decides the change's disposition, not its correctness: kill the branch, re-scope the work into smaller pieces, or override the review. Only the third of those requires reading the diff (see *Who reads a diff* above), and an override is written down with its reason — it is the one place a person's judgment outranks a machine's, and an unrecorded override is indistinguishable from giving up.
    - For a change on the exception list, nothing about this loop changes. What changes is upstream, at step 3: its local review had to be at level 2 or better. There is no additional human reading step here to clear it.
+   - A change spanning many files becomes one PR per task — **REQUIRED SUB-SKILL:** superpowers:writing-plans, then superpowers:executing-plans or subagent-driven-development.
 5. **A human developer merges the PR.** AI review approval is never sufficient by itself — this is the one non-negotiable rule in this whole pipeline. Everything upstream of this step can be automated; this step cannot. The decision being made is scope, not correctness: whether this change belongs in the repo at all and whether it belongs now. The information it is made from is the cloud review verdict, so **a merge requires cloud review to have passed** — a merge gate that consumes no information is a rubber stamp.
    - **This step has no mechanism inside this skill, and pretending otherwise would be dishonest.** As written it is a social contract, which is exactly what step 0 rejects as insufficient. What makes it real is whatever the hosting platform enforces — required reviews, protected branches, whatever the project's forge and organisation provide. Configuring that is out of scope here and belongs to the project; noticing that it is unconfigured is not.
-   - After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch (worktree removal, branch deletion) rather than leaving it ad hoc.
+   - After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch — Step 6's worktree removal plus Step 5 Option 1's `git branch -d` — rather than leaving it ad hoc.
 6. CI/CD deploys to a test environment for validation.
    - **If validation fails, it routes back to step 2** (re-implement), not to an undefined state. Don't let "validation failed" become a dead end nobody owns.
 
 ### Break-glass path for production incidents
 
-A live incident may skip step 0 (isolation) to move fast. It may **never** skip step 3's local review, the exception list's level-2 requirement, or the step 5 human merge gate — incident pressure is exactly the condition those rules exist to survive, not an exemption from them. A local review costs one subagent round; the argument that there was no time for it has never been true. Within a fixed window after the incident (e.g. 24 hours), open a postmortem PR that walks the change through the full pipeline retroactively, including the steps that were skipped live. If the incident is a fix to an already-shipped version rather than to trunk, see **Release branching model** below for how the fix gets there — the fix still lands on trunk first, through this same break-glass path, and reaches the shipped version by cherry-pick.
+A live incident may skip step 0 (isolation) to move fast. It may **never** skip step 3's local review, the exception list's level-2 requirement, or the step 5 human merge gate — incident pressure is exactly the condition those rules exist to survive, not an exemption from them. A local review costs one subagent round; the argument that there was no time for it has never been true. Within a fixed window after the incident (e.g. 24 hours), open a postmortem PR that walks the change through the full pipeline retroactively, including the steps that were skipped live. If the incident is a fix to an already-shipped version rather than to trunk, see **Release and hotfix model** below for how the fix gets there — it branches from that version's tag, and the PR merging it back into trunk is itself the postmortem PR this path requires.
 
-## Release branching model
+## Release and hotfix model
 
-Everything above assumes trunk-based development throughout: small PRs, frequent merges into a single long-lived branch. That assumption doesn't change here — this section makes explicit what was already implicit, and covers the one place it isn't sufficient by itself: a project whose release moment doesn't coincide with every merge.
+Trunk-based throughout: small PRs, frequent merges, one long-lived branch. A
+release is a **tag on trunk**. There are no release branches — no branch is
+ever cut from trunk in advance and kept alive alongside it. A branch cut
+*from a tag* to carry fixes for that shipped version, living only until it
+merges back, is what this model does everywhere, incident or not — that is
+not a release branch by another name, it is the one mechanism below.
 
-**Decision criterion:** can the project itself decide when trunk's current state goes live, or is that timing controlled by someone outside the project — an app store review queue, a compliance sign-off, a customer who installs a versioned artifact on their own schedule?
+A hotfix to a shipped version branches from that version's tag, is fixed
+there, and still gets step 3's local review — at the exception list's
+level-2 floor if the fix lands in one of those categories — before the
+branch is tagged again; the new tag is what drives CI/CD. That branch is
+then merged back into trunk. A human executes the hotfix tag push, since
+that is what puts code in front of users.
 
-- **The project controls release timing.** Use feature flags: merge finished-but-not-yet-exposed work straight into trunk, gated behind a flag, and flip the flag when it should go live. This skill only names the option here — flag hygiene (when to retire a flag, how to test flag combinations) is its own discipline, out of scope for a skill about review depth and merge gates.
-- **Release timing is controlled by someone else.** Cut a short-lived `release/x.y` branch from trunk at the moment of each release. Ongoing development keeps happening on trunk, unaffected. This is deliberately not git-flow's long-lived `develop` branch: nothing on the release branch ever exists only there, so there is no separate development line that later needs reconciling back into trunk.
+**The tag push is a deploy, not a merge.** `CONTEXT.md` defines the merge
+gate as a human executing *the merge*, and nothing is being merged at the
+moment a tag is pushed. What break-glass forbids skipping — the human merge
+gate — is therefore satisfied by the merge-back PR: that is where the only
+merge in this flow happens, and step 5's gate sits there, not at the tag
+push.
 
-**Hotfixing a release branch.** A fix always lands on trunk first — through the normal review and merge-gate pipeline, or through the break-glass path above if it is a live incident — then gets cherry-picked onto the affected release branch. The direction is one-way, trunk to release branch, never the reverse. **Release branches never take a direct commit.** Every change on one arrived by cherry-pick from trunk. This is the rule that keeps this model simpler than git-flow: the moment someone commits straight to a release branch to save a step, that branch starts diverging from trunk, and the project is back to needing a reconciliation (back-merge) step that this model exists to avoid. Hold this rule especially hard under incident pressure, which is exactly when the shortcut looks most tempting.
+The merge back is the step that gets skipped, at exactly the moment it is most
+likely to be: the incident is over and production is healthy. So it is not a
+separate obligation. **The PR merging the hotfix branch back into trunk is the
+postmortem PR that the break-glass path above already requires, within the same
+window.** Until it lands, the fix does not exist on trunk, and any release cut
+from trunk in the meantime ships the original bug.
 
-Landing a cherry-pick on a release branch still goes through **step 5's human-merge rule** above — a human executes or approves it — but does not need the diff re-reviewed for correctness, since that already happened when the same commit landed on trunk. What the human is deciding here is scope: whether this fix belongs on this particular shipped version yet, not whether the code is right.
+Every release therefore has a traceable marker by construction — the tag — and
+a hotfix's ancestry is readable from which tag it branched from.
 
-Every release needs some identifiable marker of what shipped — a git tag, a version file, a CHANGELOG entry, whatever the project already uses — so a release branch's origin commit, and every patch cut onto it afterward, stays traceable. The exact form is the project's choice; only the requirement that some marker exists is not optional, since without one there is no reliable answer to "which shipped version does this hotfix belong to."
+When an external gatekeeper controls release timing — an app-store review
+queue, a compliance sign-off — fixes for the pending submission accumulate on
+a branch cut from the submitted tag, and that branch is re-tagged when it's
+ready for resubmission: the same mechanism, not a new one.
 
-## Breaking large changes into reviewable pieces
+## What the project's own routing table must carry
 
-A single change spanning many files or several days of work should not become one large PR reviewed once at the end. **REQUIRED SUB-SKILL:** superpowers:writing-plans to break the work into tasks before implementation starts, then superpowers:executing-plans (or subagent-driven-development) to execute and open one PR per task, with review between tasks — this is also how PR-granularity limits (a home-layer convention on multi-person teams) actually get enforced instead of staying a slogan nobody has a mechanism for.
+The repo layer — a project's `change-type-routing` table — must state as
+concrete rows, with actual values rather than prose: **the independence level
+this project actually reaches**, the review-loop cap number, and any category
+where the project has declared that a human does read the diff. A rule with
+no number in it is not a rule anyone can be held to.
 
-## Three-layer CLAUDE.md split
-
-- **Home layer** (org/team-wide convention, shared across every project): this is what the `ai-workflow` repo's own README already describes — a `SessionStart` hook that pulls the repo and symlinks its `skills/` and `agents/` into every collaborator's global `~/.claude/skills/` and `~/.claude/agents/`, plus a one-line `@<repo>/CLAUDE.md` import added once to each collaborator's personal `~/.claude/CLAUDE.md` so the team's own conventions load every session without overwriting personal instructions. Point to that pattern rather than re-describing it here.
-- **Repo layer** (project-wide): the architecture rules a project's own `change-type-routing` table produces. This table must include the review-depth exception list (including the governance-file and unpinned-dependency rows), **the independence level this project actually reaches**, the review-loop cap number, any category where the project has declared that a human does read the diff, and which release branching model the project uses (trunk-only, trunk with feature flags, or trunk with release branches — see Release branching model above) as cross-cutting rows — they're part of the architecture rules, not a separate document.
-- **Folder/package layer** (scoped, optional): a stricter edit boundary and smaller PR granularity for one sensitive subtree (e.g., a billing module, a crypto/auth package). Use this when a whole package needs tighter constraints than the rest of the repo, not as a substitute for the exception list above — the exception list applies by change category everywhere, the folder layer applies by location for one specific area.
+The home layer is this repo, synced as its README describes. A folder layer —
+a stricter boundary for one sensitive subtree — is optional, supplements the
+exception list rather than replacing it, and is a plain Claude Code feature
+needing no explanation here.
 
 ## Testing this skill
 
