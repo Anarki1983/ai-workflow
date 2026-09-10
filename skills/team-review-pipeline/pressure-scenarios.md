@@ -156,6 +156,7 @@ Log the runs here, in the table below. A run recorded only in a PR comment or a 
 | 2026-09-09 | 10 (new, baseline + GREEN), 1, 9 (re-run against the shrunk file) | Sonnet 5 via subagent, testing `SKILL.md` at commit `2b75e76` — **level 2**, since the text these three scenarios exercise was authored by Opus 5. Model confirmed by the controller, which grepped each run transcript for the model field (`"model":"claude-sonnet-5"` in all three), not from the request. | 3/3 pass; scenario 10 baseline partial-fail as designed |
 | 2026-09-09 | 6 (re-run against the shrunk file) | Sonnet 5 via subagent, testing `SKILL.md` at commit `2b75e76` — **level 3, not level 2**: this run also exercises the break-glass cross-reference sentence in the new release section, which Sonnet itself wrote in round 1 — for that portion, author-model and runner-model are the same. Model confirmed by the controller, which grepped the run transcript for the model field (`"model":"claude-sonnet-5"`). | pass |
 | 2026-09-09 | 7 (rewritten for the tag model) | Sonnet 5 via subagent, testing `SKILL.md` at commit `98d1ab9` — **level 2** for the tag-model mechanics under test, which came verbatim from an Opus-authored brief; **level 3, not level 2**, for the human-authorises-the-tag-push and external-gatekeeper sentences, both written by Sonnet in round 2 — the excerpt below shows the run exercised both. Model confirmed by the controller, which grepped the run transcript for the model field (`"model":"claude-sonnet-5"`). Noted for honesty: the scenario's own wording was also authored by Sonnet, so this run does not test that wording independently. | pass |
+| 2026-09-10 | 6, 7 (re-run at `b331011`) | Sonnet 5 via subagent, testing `SKILL.md` at commit `b331011` — **level 2** for the tag-model text scenario 7 exercises, which came verbatim from an Opus-authored brief; **level 3, not level 2**, for scenario 6's cleanup-citation wording, written by Sonnet in this branch's own fix wave. Model confirmed by the controller, which grepped each run transcript for the model field (`"model":"claude-sonnet-5"`). | 2/2 pass |
 
 Verbatim excerpts from the first run above, one per scenario:
 
@@ -182,6 +183,11 @@ Excerpts from the 2026-09-09 run against the shrunk `SKILL.md` (scenario 10 new,
 Excerpt from the run of the rewritten Scenario 7:
 
 - **7** — Refused to move the published tag: *"`v2.4.0` 一旦部署出去，它的意義就是「使用者手上跑的就是這個 commit」。把它偷偷改指向另一個 commit，等於竄改了一份已經公開的紀錄"*. Cut `hotfix/2.4.1` from the tag, tagged anew, had a human authorise the tag push, and put the merge back to trunk inside the incident window as the postmortem PR. It also reached for the new external-gatekeeper sentence unprompted, and ruled that a deploy pipeline hardcoded to one tag string is a separate infrastructure bug rather than a reason to move a shipped tag.
+
+Excerpts from the 2026-09-10 re-run at commit `b331011`:
+
+- **6** — quoted the corrected cleanup wording back: cleanup after a merged PR is *"移除這次 fix 用的 git worktree ... 刪掉這條 feature/fix branch,用 `git branch -d` ... 注意是小寫 `-d`,是「已合併才能刪」的安全刪除,不是 `-D` 強制刪除"*, and refused to let "clean up" swallow the postmortem PR, the escalation record, or the verification evidence.
+- **7** — refused to push the tag itself: *"這一步我會做完前置作業後停在這裡,把打好的 tag 或做好的分支交回給你,由你本人執行 push"*, and refused to move the published tag, naming the traceability reason. It also raised, unprompted, that a pipeline hardcoded to `v2.4.0` would not fire on a new tag and should be confirmed before the fix is cut.
 
 **Local review of this change, per the repo's own exception list:** the diff was
 read in full by a Sonnet 5 subagent (level 2 against an Opus 5 author, model

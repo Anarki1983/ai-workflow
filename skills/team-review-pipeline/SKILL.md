@@ -33,7 +33,7 @@ Depth here is not "how much of the diff a human reads." It is **how uncorrelated
 
 Level 4 is not a weak review, it is the absence of one; treat a pipeline that relies on it as unreviewed. **Every project writes the level it actually reaches into its own `change-type-routing` table**, as a concrete row, because a ladder that lives only in this generic skill is a ladder nobody is standing on.
 
-**The level reached is verified, not requested.** Asking for a particular reviewer is not evidence you got one: a model override can be ignored or silently fall back to a default, and a fallback that lands on the authoring model turns a claimed level 2 into an actual level 3 — or into a level 4 that only looks like a review, if what answered was the authoring session itself — with nothing to show it. Read back what actually ran — the transcript, the run metadata, whatever the harness records — before writing a level down. A pipeline whose independence guarantee rests on an unverified request is not at the level it thinks it is, and this is exactly the failure superpowers:verification-before-completion exists to prevent, applied to review instead of to tests.
+**The level reached is verified, not requested.** Asking for a particular reviewer is not evidence you got one: a model override can be ignored or silently fall back to a default, and a fallback that lands on the authoring model turns a claimed level 2 into an actual level 3 — or into a level 4 that only looks like a review, if what answered was the authoring session itself — with nothing to show it. Asking the reviewer what it is doesn't close the gap either: a subagent given an explicit model override has opened its report by confidently naming itself as that model, model ID included, while its actual run transcript showed a different model had answered — a self-report is not a run record any more than a request is. Read back what actually ran — the transcript, the run metadata, whatever the harness records — before writing a level down. A pipeline whose independence guarantee rests on an unverified request is not at the level it thinks it is, and this is exactly the failure superpowers:verification-before-completion exists to prevent, applied to review instead of to tests.
 
 The transport does not matter and must not be written into the rule. A subagent running a different model, a second provider over MCP, a cloud review service — these are implementations of level 2, and prescribing one of them (an earlier version of this skill mandated MCP) rules out setups that reach the same level by another route.
 
@@ -58,7 +58,7 @@ Add this list as a cross-cutting rule in the project's `change-type-routing` tab
 
 ## Dev flow, with the loop-exits and evidence gates made explicit
 
-0. **Isolate the work.** **REQUIRED SUB-SKILL:** superpowers:using-git-worktrees, before implementation starts.
+0. **Isolate the work.** **REQUIRED SUB-SKILL:** superpowers:using-git-worktrees, before implementation starts. On a team where several people or agents touch one repo at once, uncommitted state and half-finished test runs collide across work streams — an agreement about scopes is a social contract, not a mechanism.
 1. Doc/architecture gate — the change fits the project's documented architecture rules (produced by `change-type-routing`) before anything is implemented.
 2. AI implements test-first. **REQUIRED SUB-SKILL:** superpowers:test-driven-development and superpowers:verification-before-completion.
 3. **Local review.** A reviewer at the project's declared independence level reads the full diff, before a PR exists. This is the layer that matters most, because it is the only one that runs while the change is still cheap to redirect. It is not optional and it is not a human step; a project whose declared level is 4 has not configured this step, it has skipped it.
@@ -70,7 +70,7 @@ Add this list as a cross-cutting rule in the project's `change-type-routing` tab
    - For a change on the exception list, nothing about this loop changes. What changes is upstream, at step 3: its local review had to be at level 2 or better. There is no additional human reading step here to clear it.
    - A change spanning many files becomes one PR per task — **REQUIRED SUB-SKILL:** superpowers:writing-plans, then superpowers:executing-plans or subagent-driven-development.
 5. **A human developer merges the PR.** AI review approval is never sufficient by itself — this is the one non-negotiable rule in this whole pipeline. Everything upstream of this step can be automated; this step cannot. The decision being made is scope, not correctness: whether this change belongs in the repo at all and whether it belongs now. The information it is made from is the cloud review verdict, so **a merge requires cloud review to have passed** — a merge gate that consumes no information is a rubber stamp.
-   - **This step has no mechanism inside this skill, and pretending otherwise would be dishonest.** As written it is a social contract, and a social contract is not a mechanism. What makes it real is whatever the hosting platform enforces — required reviews, protected branches, whatever the project's forge and organisation provide. Configuring that is out of scope here and belongs to the project; noticing that it is unconfigured is not.
+   - **This step has no mechanism inside this skill, and pretending otherwise would be dishonest.** As written it is a social contract, which is exactly what step 0 rejects as insufficient. What makes it real is whatever the hosting platform enforces — required reviews, protected branches, whatever the project's forge and organisation provide. Configuring that is out of scope here and belongs to the project; noticing that it is unconfigured is not.
    - After merging, clean up per **REQUIRED SUB-SKILL:** superpowers:finishing-a-development-branch — Step 6's worktree removal plus Step 5 Option 1's `git branch -d` — rather than leaving it ad hoc.
 6. CI/CD deploys to a test environment for validation.
    - **If validation fails, it routes back to step 2** (re-implement), not to an undefined state. Don't let "validation failed" become a dead end nobody owns.
@@ -88,11 +88,19 @@ ever cut from trunk in advance and kept alive alongside it. A branch cut
 merges back, is what this model does everywhere, incident or not — that is
 not a release branch by another name, it is the one mechanism below.
 
-A hotfix to a shipped version branches from that version's tag, is fixed there,
-and is tagged again — the new tag is what drives CI/CD. That branch is then
-merged back into trunk. A human executes the hotfix tag push,
-since that is what puts code in front of users; step 5's merge gate is a
-separate, later gate on the PR that merges the hotfix branch back into trunk.
+A hotfix to a shipped version branches from that version's tag, is fixed
+there, and still gets step 3's local review — at the exception list's
+level-2 floor if the fix lands in one of those categories — before the
+branch is tagged again; the new tag is what drives CI/CD. That branch is
+then merged back into trunk. A human executes the hotfix tag push, since
+that is what puts code in front of users.
+
+**The tag push is a deploy, not a merge.** `CONTEXT.md` defines the merge
+gate as a human executing *the merge*, and nothing is being merged at the
+moment a tag is pushed. What break-glass forbids skipping — the human merge
+gate — is therefore satisfied by the merge-back PR: that is where the only
+merge in this flow happens, and step 5's gate sits there, not at the tag
+push.
 
 The merge back is the step that gets skipped, at exactly the moment it is most
 likely to be: the incident is over and production is healthy. So it is not a
